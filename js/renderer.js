@@ -105,6 +105,12 @@
       self.spawnFloater(data.team, '+' + data.amount, 'add');
     });
 
+    engine.on('boards:capped', function (data) {
+      // Only worth saying when the gift did nothing at all - when part of it
+      // landed, the "+N" floater already tells the story.
+      if (data.applied === 0) self.spawnFloater(data.team, 'MAX', 'max');
+    });
+
     engine.on('boards:remove', function (data) {
       self.pulseCount(data.team, true);
       self.spawnFloater(data.team, '-' + data.amount, 'remove');
