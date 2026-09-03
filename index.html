@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KAWAII vs BEAUTIFUL</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============================================================
+     STAGE : always laid out as 1920x1080, then scaled to fit.
+     This is what you point the OBS browser source at.
+     ============================================================ -->
+<div id="stage-wrap">
+  <div id="stage" class="stage">
+
+    <div class="bg-glow bg-glow--kawaii"></div>
+    <div class="bg-glow bg-glow--beautiful"></div>
+    <div class="bg-grid"></div>
+
+    <!-- top : scoreboard -->
+    <header class="scoreboard">
+      <div class="scoreboard__side scoreboard__side--kawaii">
+        <span class="scoreboard__name">KAWAII</span>
+        <span class="scoreboard__score" id="score-kawaii">0</span>
+      </div>
+      <div class="scoreboard__sep">-</div>
+      <div class="scoreboard__side scoreboard__side--beautiful">
+        <span class="scoreboard__score" id="score-beautiful">0</span>
+        <span class="scoreboard__name">BEAUTIFUL</span>
+      </div>
+      <div class="scoreboard__round">ROUND <b id="round-number">1</b> <span class="scoreboard__first-to">FIRST TO <b id="rounds-to-win">10</b></span></div>
+    </header>
+
+    <!-- middle : towers + VS -->
+    <main class="arena">
+
+      <!-- KAWAII -->
+      <section class="team team--kawaii" id="team-kawaii">
+        <div class="tower">
+          <div class="tower__frame">
+            <div class="tower__target-line"><span>1000</span></div>
+            <div class="tower__fill" id="fill-kawaii">
+              <div class="tower__cap"></div>
+            </div>
+            <div class="tower__floaters" id="floaters-kawaii"></div>
+          </div>
+          <div class="tower__base"></div>
+        </div>
+        <div class="team__label">KAWAII</div>
+        <div class="team__count">
+          <span class="team__count-value" id="count-kawaii">0</span>
+          <span class="team__count-unit">/ 1000</span>
+        </div>
+      </section>
+
+      <!-- center -->
+      <section class="center">
+        <div class="center__title">
+          <span class="center__word center__word--kawaii">KAWAII</span>
+          <span class="center__vs">VS</span>
+          <span class="center__word center__word--beautiful">BEAUTIFUL</span>
+        </div>
+
+        <div class="countdown" id="countdown" aria-hidden="true">
+          <div class="countdown__label" id="countdown-label">KAWAII HOLDING</div>
+          <div class="countdown__dial">
+            <svg class="countdown__ring" viewBox="0 0 200 200">
+              <circle class="countdown__ring-bg" cx="100" cy="100" r="92"></circle>
+              <circle class="countdown__ring-fg" id="countdown-ring" cx="100" cy="100" r="92"></circle>
+            </svg>
+            <div class="countdown__number" id="countdown-number">10</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BEAUTIFUL -->
+      <section class="team team--beautiful" id="team-beautiful">
+        <div class="tower">
+          <div class="tower__frame">
+            <div class="tower__target-line"><span>1000</span></div>
+            <div class="tower__fill" id="fill-beautiful">
+              <div class="tower__cap"></div>
+            </div>
+            <div class="tower__floaters" id="floaters-beautiful"></div>
+          </div>
+          <div class="tower__base"></div>
+        </div>
+        <div class="team__label">BEAUTIFUL</div>
+        <div class="team__count">
+          <span class="team__count-value" id="count-beautiful">0</span>
+          <span class="team__count-unit">/ 1000</span>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- overlays -->
+    <div class="banner" id="banner" aria-hidden="true">
+      <div class="banner__main" id="banner-main"></div>
+      <div class="banner__sub" id="banner-sub"></div>
+    </div>
+
+    <div class="flash" id="flash"></div>
+    <div class="confetti" id="confetti"></div>
+
+    <footer class="ticker" id="ticker"></footer>
+  </div>
+</div>
+
+<!-- ============================================================
+     TEST CONTROLS : stands in for the TikTok LIVE gift feed.
+     Press "H" to hide, or open index.html?obs=1 for a clean stage.
+     ============================================================ -->
+<div id="controls" class="controls">
+  <div class="controls__head">
+    <h2>TEST CONTROLS <small>(TikTok gift simulator)</small></h2>
+    <button type="button" id="toggle-controls" class="btn btn--ghost">HIDE (H)</button>
+  </div>
+
+  <div class="controls__grid">
+    <div class="controls__group controls__group--kawaii">
+      <h3>KAWAII</h3>
+      <button type="button" class="btn btn--kawaii" data-action="add" data-team="kawaii" data-amount="1">KAWAII +1</button>
+      <button type="button" class="btn btn--kawaii" data-action="add" data-team="kawaii" data-amount="10">KAWAII +10</button>
+      <button type="button" class="btn btn--kawaii" data-action="add" data-team="kawaii" data-amount="50">KAWAII +50</button>
+      <button type="button" class="btn btn--attack" data-action="attack" data-team="kawaii" data-amount="10">KAWAII ATTACK <small>-10 BEAUTIFUL</small></button>
+    </div>
+
+    <div class="controls__group controls__group--beautiful">
+      <h3>BEAUTIFUL</h3>
+      <button type="button" class="btn btn--beautiful" data-action="add" data-team="beautiful" data-amount="1">BEAUTIFUL +1</button>
+      <button type="button" class="btn btn--beautiful" data-action="add" data-team="beautiful" data-amount="10">BEAUTIFUL +10</button>
+      <button type="button" class="btn btn--beautiful" data-action="add" data-team="beautiful" data-amount="50">BEAUTIFUL +50</button>
+      <button type="button" class="btn btn--attack" data-action="attack" data-team="beautiful" data-amount="10">BEAUTIFUL ATTACK <small>-10 KAWAII</small></button>
+    </div>
+
+    <div class="controls__group controls__group--system">
+      <h3>SYSTEM</h3>
+      <button type="button" class="btn btn--ghost" data-action="reset-round">RESET ROUND</button>
+      <button type="button" class="btn btn--ghost" data-action="reset-match">RESET MATCH</button>
+      <button type="button" class="btn btn--ghost" data-action="add" data-team="kawaii" data-amount="1000">KAWAII +1000 <small>(demo)</small></button>
+      <button type="button" class="btn btn--ghost" data-action="add" data-team="beautiful" data-amount="1000">BEAUTIFUL +1000 <small>(demo)</small></button>
+    </div>
+  </div>
+
+  <p class="controls__hint">
+    Keyboard: <b>Q/W/E</b> KAWAII +1/+10/+50 &middot; <b>A</b> KAWAII ATTACK &middot;
+    <b>I/O/P</b> BEAUTIFUL +1/+10/+50 &middot; <b>L</b> BEAUTIFUL ATTACK &middot;
+    <b>R</b> reset round &middot; <b>M</b> reset match &middot; <b>H</b> hide panel
+  </p>
+</div>
+
+<!-- load order matters: logic -> view -> input -> boot -->
+<script src="js/game.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/controls.js"></script>
+<script src="js/tiktok-adapter.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
