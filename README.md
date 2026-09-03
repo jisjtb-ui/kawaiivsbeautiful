@@ -3,7 +3,8 @@
 TikTok LIVE 用「ギフト連動型 対抗戦ゲーム」の MVP。
 
 このリポジトリは **TikTok API を一切使っていません**。
-外部ライブラリ・ビルド・サーバーなしで、ブラウザだけで完全に動作します。
+外部ライブラリもビルドも不要で、静的ファイルを配るだけで動きます
+（`python3 -m http.server 8000` → <http://localhost:8000/>）。
 後から TikTok LIVE のギフトイベントを差し込めるように、
 **ゲームロジックと入力処理が完全に分離**されています。
 
@@ -11,24 +12,59 @@ TikTok LIVE 用「ギフト連動型 対抗戦ゲーム」の MVP。
 
 ## 1. 動かす
 
+**HTTP サーバー経由で開いてください。** `index.html` がエントリーポイントです。
+
+### 手順
+
 ```
-git clone <this repo>
+git clone https://github.com/jisjtb-ui/kawaiivsbeautiful.git
 cd kawaiivsbeautiful
+git switch claude/kawaii-beautiful-gift-game-962l4y
+
+python3 -m http.server 8000
 ```
 
-`index.html` をブラウザで開くだけです（`file://` で動きます）。
+ブラウザで開く:
 
 | URL | 用途 |
 | --- | --- |
-| `index.html` | テストボタン付き（開発・動作確認用） |
-| `index.html?obs=1` | 配信画面のみ（OBS 用） |
+| <http://localhost:8000/> | テストボタン付き（開発・動作確認用） |
+| <http://localhost:8000/index.html?obs=1> | 配信画面のみ（OBS 用） |
 
-ローカルサーバーで開きたい場合:
+サーバーを止めるときは `Ctrl+C`。
+8000 番が埋まっている場合は `python3 -m http.server 8080` のように変更してください。
+
+ビルド・npm install・外部ライブラリは不要です。
+`python3 -m http.server` は静的ファイルを配るだけで、追加の設定ファイルもありません。
+
+Python が無い環境なら以下でも同じです:
 
 ```
-python3 -m http.server 8000
-# → http://localhost:8000/index.html
+npx serve .          # Node
+php -S localhost:8000  # PHP
 ```
+
+### なぜ file:// で開かないのか
+
+ダブルクリックで開く（`file://`）と、ブラウザがページのオリジンを `null` として扱うため、
+これから追加する外部通信がことごとくブロックされます。
+
+- WebSocket 接続（`ws://localhost:21213` など）が拒否される
+- `fetch` / `XMLHttpRequest` が CORS で弾かれる
+- ブラウザによっては `localStorage` も使えない
+
+TikTok LIVE のギフトを WebSocket で受け取る予定なので、
+**最初から HTTP サーバー経由に揃えてあります**。
+開発中もこの構成のままにしておけば、接続を足すときに何も直す必要がありません。
+
+### 読み込みチェック
+
+CSS や JS の読み込みに失敗した場合は、真っ白な画面ではなく
+画面上部に赤いエラーバーが出て、どのファイルが足りないかを表示します。
+これが出たときは、`index.html` のあるフォルダでサーバーを起動しているか確認してください。
+
+CSS を編集したのに見た目が変わらないときは、スーパーリロード
+（Windows/Linux: `Ctrl+Shift+R`、Mac: `Cmd+Shift+R`）でキャッシュを飛ばしてください。
 
 ---
 
@@ -39,6 +75,7 @@ python3 -m http.server 8000
 | チーム | KAWAII / BEAUTIFUL | `js/game.js` の `TEAM` |
 | ラウンド開始時の板 | 両チーム 0 枚 | `startRound()` |
 | 勝利ライン | 1000 枚 | `targetBoards` |
+| 板の上限 | 1000 枚（頭打ち） | `maxBoards`（既定 = `targetBoards`） |
 | 維持時間 | 10 秒 | `holdSeconds` |
 | 試合勝利 | 先に 10 ラウンド | `roundsToWinMatch` |
 | 次ラウンド自動開始 | 4 秒後 | `nextRoundDelayMs` |
@@ -53,9 +90,24 @@ python3 -m http.server 8000
 
 補足（仕様の隙間をどう埋めたか）:
 
+- **板は 1000 枚で頭打ち**です。それ以上は増えず、タワーも数字も 1000 で止まります。
+  満タンのタワーに届いたギフトは吸収され、画面には `MAX` と表示されます
+  （`+0` は出しません）。エンジンは `boards:capped` イベントで
+  「何枚要求されて何枚入ったか」を通知するので、無効分を別演出にすることもできます。
 - カウントダウンは**先に 1000 枚に到達したチームのもの**です。
-  相手が後から 1000 枚を超えてもカウントダウンは奪われません。
+  相手が後から 1000 枚に到達してもカウントダウンは奪われません。
   解除されるのは「カウントダウン中のチーム自身が 1000 枚未満に落ちたとき」だけです。
+- ただし解除された瞬間に**相手がすでに 1000 枚なら、そのままカウントダウンを引き継ぎます**
+  （10 秒はリセットされ、引き継いだ側が新たに 10 秒維持する必要があります）。
+  例: KAWAII が先に 1000 到達でカウントダウン → BEAUTIFUL も 1000 到達 →
+  BEAUTIFUL ATTACK で KAWAII が 990 → `COUNTDOWN CANCELLED / BEAUTIFUL TAKES OVER`
+  と表示され、そのまま BEAUTIFUL の 10 秒カウントダウンが始まります。
+  このとき `countdown:start` は `takenFrom` に前の保持チームを載せて飛ぶので、
+  通常の到達と引き継ぎを演出で区別できます。
+  上限が 1000 枚なので両チームが同時に 1000 枚で並ぶ状況が普通に起こり、
+  ここで引き継がなければ「満タンなのに誰も カウントダウンしていない」まま
+  ラウンドが止まってしまうためです（満タン以降のギフトは 0 枚しか入らず、
+  次のきっかけが来ない）。
 - ラウンド終了中・試合終了後は板の増減を受け付けません（`isLive()` で判定）。
 - 板は 0 枚未満にはなりません。
 
@@ -115,16 +167,20 @@ KVB.engine.getState();
 
 ## 5. OBS ブラウザソース設定
 
+先に `python3 -m http.server 8000` を起動しておきます。
+
 1. ソース → **ブラウザ** を追加
-2. **ローカルファイル** にチェック → `index.html` を選択
-3. **カスタムフレームURL** を使う場合は末尾に `?obs=1` を付ける
-   （ローカルファイル指定時は「カスタム CSS」欄は空のままで OK）
-4. 幅 `1920` / 高さ `1080`
-5. 「表示されていないときにソースをシャットダウンする」は **オフ**推奨
+2. **URL** に `http://localhost:8000/index.html?obs=1` を入力
+   （「ローカルファイル」にはチェックを**入れない**）
+3. 幅 `1920` / 高さ `1080`
+4. 「表示されていないときにソースをシャットダウンする」は **オフ**推奨
    （オンだとシーン切替のたびに試合がリセットされます）
 
 `?obs=1` を付けるとテストパネルが消え、配信画面だけになります。
 配信中でも `H` キーでパネルを出し入れできます。
+
+配信中はサーバーを起動したままにしてください。
+サーバーを止めると OBS 側は最後に描画された画面のまま止まります。
 
 ---
 
@@ -252,6 +308,13 @@ TikTokAdapter.prototype.connect = function (url) {
 tiktok.connect();     // engine.startMatch(); の後ろに 1 行足すだけ
 ```
 
+**ここで HTTP サーバー経由の構成が効いてきます。**
+`http://localhost:8000` から `ws://localhost:21213` への接続は普通に通ります。
+`file://` で開いていると、この接続はオリジンが `null` 扱いになり失敗します。
+
+なお、ページを `https://` で配信する場合は WebSocket も `wss://` にする必要があります
+（ブラウザが混在コンテンツを拒否するため）。ローカル開発では `http` + `ws` で問題ありません。
+
 ### 接続先の一覧（ギフト以外も足したいとき）
 
 `js/game.js` の以下のメソッドが公開 API です。
@@ -277,9 +340,10 @@ TikTok 側のどのイベントをどれに割り当てても構いません。
 ```js
 KVB.engine.on('boards:add',        (d) => {});  // { team, amount, total, meta }
 KVB.engine.on('boards:remove',     (d) => {});  // { team, amount, total, meta }
+KVB.engine.on('boards:capped',     (d) => {});  // { team, requested, applied, wasted, total, meta }
 KVB.engine.on('board:break',       (d) => {});  // { team, amount }
 KVB.engine.on('attack',            (d) => {});  // { attacker, target, amount }
-KVB.engine.on('countdown:start',   (d) => {});  // { team, seconds, boards }
+KVB.engine.on('countdown:start',   (d) => {});  // { team, seconds, boards, takenFrom }
 KVB.engine.on('countdown:tick',    (d) => {});  // { team, secondsLeft }
 KVB.engine.on('countdown:cancel',  (d) => {});  // { team, boards }
 KVB.engine.on('round:start',       (d) => {});  // { round }

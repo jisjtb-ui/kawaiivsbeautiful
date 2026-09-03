@@ -105,6 +105,12 @@
       self.spawnFloater(data.team, '+' + data.amount, 'add');
     });
 
+    engine.on('boards:capped', function (data) {
+      // Only worth saying when the gift did nothing at all - when part of it
+      // landed, the "+N" floater already tells the story.
+      if (data.applied === 0) self.spawnFloater(data.team, 'MAX', 'max');
+    });
+
     engine.on('boards:remove', function (data) {
       self.pulseCount(data.team, true);
       self.spawnFloater(data.team, '-' + data.amount, 'remove');
@@ -124,10 +130,21 @@
       self.el.countdown.classList.add('team-' + data.team);
       self.el.countdownLabel.textContent = TEAM_LABEL[data.team] + ' HOLDING';
       self._lastSecond = null;
-      self.setTicker(TEAM_LABEL[data.team] + ' REACHED ' + engine.config.targetBoards);
-      self.showBanner(TEAM_LABEL[data.team] + ' ' + engine.config.targetBoards + '!',
-        'HOLD ' + engine.config.holdSeconds + ' SECONDS',
-        { variant: data.team, duration: 1200, priority: 2 });
+
+      if (data.takenFrom) {
+        // The opponent was knocked off the target and this team was already
+        // sitting on a full tower. Say so in one short beat and get out of the
+        // way fast - the new countdown is already running underneath.
+        self.setTicker(TEAM_LABEL[data.team] + ' TAKES OVER');
+        self.showBanner('COUNTDOWN CANCELLED',
+          TEAM_LABEL[data.team] + ' TAKES OVER',
+          { variant: data.team, duration: 1100, priority: 4 });
+      } else {
+        self.setTicker(TEAM_LABEL[data.team] + ' REACHED ' + engine.config.targetBoards);
+        self.showBanner(TEAM_LABEL[data.team] + ' ' + engine.config.targetBoards + '!',
+          'HOLD ' + engine.config.holdSeconds + ' SECONDS',
+          { variant: data.team, duration: 1200, priority: 2 });
+      }
     });
 
     engine.on('countdown:cancel', function (data) {

@@ -306,6 +306,7 @@ body.obs-mode .controls { display: none; }
 }
 .floater--add    { color: #fff; }
 .floater--remove { color: var(--danger); }
+.floater--max    { color: #ffd85e; font-size: 46px; letter-spacing: 6px; }
 
 @keyframes floater-up {
   0%   { opacity: 0; transform: translate(-50%, 30px) scale(0.7); }

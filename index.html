@@ -4,7 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>KAWAII vs BEAUTIFUL</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='16' height='32' fill='%23ff4f9d'/><rect x='16' width='16' height='32' fill='%2326d7ff'/></svg>">
 <link rel="stylesheet" href="css/style.css">
+<style>
+/* Inlined on purpose: this message has to render even when css/style.css
+   is the asset that failed to load. */
+.boot-error {
+  margin: 0;
+  padding: 18px 22px;
+  background: #b3001b;
+  color: #fff;
+  font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+}
+</style>
 </head>
 <body>
 
@@ -152,11 +166,42 @@
   </p>
 </div>
 
+<noscript>
+  <p class="boot-error">JavaScript が無効です。有効にして再読み込みしてください。</p>
+</noscript>
+
 <!-- load order matters: logic -> view -> input -> boot -->
 <script src="js/game.js"></script>
 <script src="js/renderer.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/tiktok-adapter.js"></script>
 <script src="js/main.js"></script>
+
+<script>
+/* Boot guard: if a stylesheet or a script failed to load, say so on screen
+   instead of leaving a blank stage. Runs after every tag above has executed.
+   The .boot-error style is inlined in <head> so this still shows up when
+   css/style.css is the file that went missing. */
+(function () {
+  var missing = [];
+  var parts = ['GameEngine', 'Renderer', 'Controls', 'TikTokAdapter'];
+
+  for (var i = 0; i < parts.length; i++) {
+    if (!window.KVB || !window.KVB[parts[i]]) missing.push('js/' + parts[i]);
+  }
+  var stage = document.getElementById('stage');
+  if (stage && getComputedStyle(stage).position !== 'absolute') missing.push('css/style.css');
+
+  if (!missing.length) return;
+
+  var box = document.createElement('p');
+  box.className = 'boot-error';
+  box.textContent =
+    '読み込みに失敗しました: ' + missing.join(', ') + ' / ' +
+    'index.html のあるフォルダで python3 -m http.server 8000 を実行し、' +
+    'http://localhost:8000/ を開いてください。';
+  document.body.insertBefore(box, document.body.firstChild);
+})();
+</script>
 </body>
 </html>

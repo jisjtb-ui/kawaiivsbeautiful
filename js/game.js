@@ -48,7 +48,7 @@
     roundsToWinMatch: 10,     // rounds needed to win the whole match
     nextRoundDelayMs: 4000,   // pause after a round before the next one starts
     autoStartNextRound: true, // rounds chain automatically
-    maxBoards: 9999           // hard cap, keeps the tower sane
+    maxBoards: null           // hard cap; null = same as targetBoards (1000)
   };
 
   function otherTeam(team) {
@@ -104,6 +104,12 @@
     Object.keys(DEFAULTS).forEach(function (key) { config[key] = DEFAULTS[key]; });
     if (options) {
       Object.keys(options).forEach(function (key) { config[key] = options[key]; });
+    }
+
+    // The tower tops out at the target: 1000 boards is the maximum a team can
+    // show, so extra gifts on a full tower are absorbed rather than stacked.
+    if (config.maxBoards === null || config.maxBoards === undefined) {
+      config.maxBoards = config.targetBoards;
     }
 
     this.config = config;
@@ -210,12 +216,28 @@
     this.boards[team] = clamp(before + amount, 0, this.config.maxBoards);
     var applied = this.boards[team] - before;
 
-    this.emit('boards:add', {
-      team: team,
-      amount: applied,
-      total: this.boards[team],
-      meta: meta || null
-    });
+    if (applied > 0) {
+      this.emit('boards:add', {
+        team: team,
+        amount: applied,
+        total: this.boards[team],
+        meta: meta || null
+      });
+    }
+
+    // The tower was already full, or filled up part way through the gift, so
+    // the rest is absorbed. Announced separately so the screen can say "MAX"
+    // instead of flashing a meaningless "+0".
+    if (applied < amount) {
+      this.emit('boards:capped', {
+        team: team,
+        requested: amount,
+        applied: applied,
+        wasted: amount - applied,
+        total: this.boards[team],
+        meta: meta || null
+      });
+    }
 
     this._evaluate();
     this._emitState();
@@ -273,20 +295,26 @@
    */
   GameEngine.prototype._evaluate = function () {
     var target = this.config.targetBoards;
+    var takenFrom = null;   // set when a cancel hands the countdown straight on
 
     if (this.countdown) {
       // Only the team that owns the countdown matters here: the countdown is
       // cancelled the moment its own tower falls under the target.
-      if (this.boards[this.countdown.team] < target) {
-        var cancelled = this.countdown;
-        this.countdown = null;
-        this.phase = PHASE.PLAYING;
-        this.emit('countdown:cancel', {
-          team: cancelled.team,
-          boards: this.boards[cancelled.team]
-        });
-      }
-      return;
+      if (this.boards[this.countdown.team] >= target) return;
+
+      var cancelled = this.countdown;
+      this.countdown = null;
+      this.phase = PHASE.PLAYING;
+      takenFrom = cancelled.team;
+      this.emit('countdown:cancel', {
+        team: cancelled.team,
+        boards: this.boards[cancelled.team]
+      });
+      // Deliberately falls through: with the tower capped at the target both
+      // teams can sit at 1000 at once, so the opponent may already be holding
+      // a full tower and has to take the countdown over right now. Waiting for
+      // another gift would hang the round - once a tower is full, further
+      // gifts add 0 boards and would never trigger this check again.
     }
 
     if (this.phase !== PHASE.PLAYING) return;
@@ -304,10 +332,15 @@
       ? candidates[0]
       : (this.boards[TEAM.BEAUTIFUL] > this.boards[TEAM.KAWAII] ? TEAM.BEAUTIFUL : TEAM.KAWAII);
 
-    this._startCountdown(leader);
+    this._startCountdown(leader, takenFrom);
   };
 
-  GameEngine.prototype._startCountdown = function (team) {
+  /**
+   * @param {string} team
+   * @param {string} [takenFrom] the team that just lost its countdown, when
+   *        this one is taking over in the same pass. null on a normal start.
+   */
+  GameEngine.prototype._startCountdown = function (team, takenFrom) {
     var durationMs = this.config.holdSeconds * 1000;
     this.countdown = {
       team: team,
@@ -318,7 +351,8 @@
     this.emit('countdown:start', {
       team: team,
       seconds: this.config.holdSeconds,
-      boards: this.boards[team]
+      boards: this.boards[team],
+      takenFrom: takenFrom || null
     });
   };
 
