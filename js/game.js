@@ -295,6 +295,7 @@
    */
   GameEngine.prototype._evaluate = function () {
     var target = this.config.targetBoards;
+    var takenFrom = null;   // set when a cancel hands the countdown straight on
 
     if (this.countdown) {
       // Only the team that owns the countdown matters here: the countdown is
@@ -304,6 +305,7 @@
       var cancelled = this.countdown;
       this.countdown = null;
       this.phase = PHASE.PLAYING;
+      takenFrom = cancelled.team;
       this.emit('countdown:cancel', {
         team: cancelled.team,
         boards: this.boards[cancelled.team]
@@ -330,10 +332,15 @@
       ? candidates[0]
       : (this.boards[TEAM.BEAUTIFUL] > this.boards[TEAM.KAWAII] ? TEAM.BEAUTIFUL : TEAM.KAWAII);
 
-    this._startCountdown(leader);
+    this._startCountdown(leader, takenFrom);
   };
 
-  GameEngine.prototype._startCountdown = function (team) {
+  /**
+   * @param {string} team
+   * @param {string} [takenFrom] the team that just lost its countdown, when
+   *        this one is taking over in the same pass. null on a normal start.
+   */
+  GameEngine.prototype._startCountdown = function (team, takenFrom) {
     var durationMs = this.config.holdSeconds * 1000;
     this.countdown = {
       team: team,
@@ -344,7 +351,8 @@
     this.emit('countdown:start', {
       team: team,
       seconds: this.config.holdSeconds,
-      boards: this.boards[team]
+      boards: this.boards[team],
+      takenFrom: takenFrom || null
     });
   };
 

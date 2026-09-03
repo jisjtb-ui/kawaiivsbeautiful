@@ -99,6 +99,11 @@ CSS を編集したのに見た目が変わらないときは、スーパーリ�
   解除されるのは「カウントダウン中のチーム自身が 1000 枚未満に落ちたとき」だけです。
 - ただし解除された瞬間に**相手がすでに 1000 枚なら、そのままカウントダウンを引き継ぎます**
   （10 秒はリセットされ、引き継いだ側が新たに 10 秒維持する必要があります）。
+  例: KAWAII が先に 1000 到達でカウントダウン → BEAUTIFUL も 1000 到達 →
+  BEAUTIFUL ATTACK で KAWAII が 990 → `COUNTDOWN CANCELLED / BEAUTIFUL TAKES OVER`
+  と表示され、そのまま BEAUTIFUL の 10 秒カウントダウンが始まります。
+  このとき `countdown:start` は `takenFrom` に前の保持チームを載せて飛ぶので、
+  通常の到達と引き継ぎを演出で区別できます。
   上限が 1000 枚なので両チームが同時に 1000 枚で並ぶ状況が普通に起こり、
   ここで引き継がなければ「満タンなのに誰も カウントダウンしていない」まま
   ラウンドが止まってしまうためです（満タン以降のギフトは 0 枚しか入らず、
@@ -338,7 +343,7 @@ KVB.engine.on('boards:remove',     (d) => {});  // { team, amount, total, meta }
 KVB.engine.on('boards:capped',     (d) => {});  // { team, requested, applied, wasted, total, meta }
 KVB.engine.on('board:break',       (d) => {});  // { team, amount }
 KVB.engine.on('attack',            (d) => {});  // { attacker, target, amount }
-KVB.engine.on('countdown:start',   (d) => {});  // { team, seconds, boards }
+KVB.engine.on('countdown:start',   (d) => {});  // { team, seconds, boards, takenFrom }
 KVB.engine.on('countdown:tick',    (d) => {});  // { team, secondsLeft }
 KVB.engine.on('countdown:cancel',  (d) => {});  // { team, boards }
 KVB.engine.on('round:start',       (d) => {});  // { round }
