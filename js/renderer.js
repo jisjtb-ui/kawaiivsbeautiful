@@ -29,7 +29,7 @@
 
   function $(id) { return document.getElementById(id); }
 
-  function Renderer(engine) {
+  function Renderer(engine, options) {
     this.engine = engine;
     this.el = {
       stage: $('stage'),
@@ -55,12 +55,27 @@
       bannerSub: $('banner-sub'),
       flash: $('flash'),
       confetti: $('confetti'),
-      ticker: $('ticker')
+      notice: $('notice'),
+      noticeUser: $('notice-user'),
+      noticeDetail: $('notice-detail'),
+      noticeEffect: $('notice-effect'),
+      fever: $('fever'),
+      feverMult: $('fever-mult'),
+      feverTime: $('fever-time')
     };
+
+    this.noticeConfig = (options && options.notice) ||
+      ((global.KVB.CONFIG && global.KVB.CONFIG.notice) || { durationMs: 1600, minVisibleMs: 700 });
 
     this._bannerTimer = null;
     this._bannerPriority = -1;
     this._lastSecond = null;
+
+    this._noticeTimer = null;
+    this._noticePending = null;
+    this._noticeShownAt = 0;
+    this._noticePriority = -1;
+    this._lastFeverSecond = null;
 
     this._bindStageScaling();
     this._bindEngine();
@@ -96,7 +111,6 @@
     engine.on('state', function (state) { self.renderState(state); });
 
     engine.on('round:start', function (data) {
-      self.setTicker('ROUND ' + data.round + ' START');
       self.showBanner('ROUND ' + data.round, 'FIGHT', { variant: 'neutral', duration: 1100, priority: 1 });
     });
 
@@ -124,7 +138,6 @@
       self.el.countdown.classList.add('team-' + data.team);
       self.el.countdownLabel.textContent = TEAM_LABEL[data.team] + ' HOLDING';
       self._lastSecond = null;
-      self.setTicker(TEAM_LABEL[data.team] + ' REACHED ' + engine.config.targetBoards);
       self.showBanner(TEAM_LABEL[data.team] + ' ' + engine.config.targetBoards + '!',
         'HOLD ' + engine.config.holdSeconds + ' SECONDS',
         { variant: data.team, duration: 1200, priority: 2 });
@@ -145,7 +158,6 @@
       self.fireFlash(false);
       self.burstConfetti(data.team);
       self.bumpScore(data.team);
-      self.setTicker(TEAM_LABEL[data.team] + ' TAKES ROUND ' + data.round);
     });
 
     engine.on('match:win', function (data) {
@@ -153,12 +165,11 @@
         'FINAL ' + data.score.kawaii + ' - ' + data.score.beautiful,
         { variant: data.team, duration: 0, priority: 10 });
       self.burstConfetti(data.team, 160);
-      self.setTicker('MATCH OVER - PRESS RESET MATCH');
     });
 
     engine.on('match:reset', function () {
       self.hideBanner(true);
-      self.setTicker('');
+      self.hideNotice();
     });
   };
 
@@ -216,6 +227,105 @@
     this.el.countdown.classList.remove('is-on');
     this.el.countdownRing.style.strokeDashoffset = 0;
     this._lastSecond = null;
+  };
+
+  // --------------------------------------------------------------- notice
+
+  /**
+   * 重要イベントの一時通知。常に 1 件だけ出し、短時間で消えます。
+   *
+   * ログのように積み上げません。新しい通知は古い通知を置き換えます。
+   * ただしイベントの多い配信で表示が点滅して読めなくならないよう、
+   * 最低表示時間 (notice.minVisibleMs) だけは守ります。
+   * 優先度が高い通知 (FEVER > GIFT > LIKE) はそれを待たずに割り込みます。
+   *
+   * @param {object} notice { kind, user, detail, effect, team, priority }
+   */
+  Renderer.prototype.showNotice = function (notice) {
+    if (!notice || !this.el.notice) return;
+
+    var priority = notice.priority || 0;
+    var visibleMs = this._noticeShownAt ? (Date.now() - this._noticeShownAt) : Infinity;
+
+    if (priority <= this._noticePriority && visibleMs < this.noticeConfig.minVisibleMs) {
+      // まだ読めていないので保留。保留が競合したら優先度の高い方を残す。
+      if (!this._noticePending || priority >= this._noticePending.priority) {
+        this._noticePending = notice;
+      }
+      this._scheduleNotice(this.noticeConfig.minVisibleMs - visibleMs);
+      return;
+    }
+
+    this._paintNotice(notice);
+  };
+
+  Renderer.prototype._paintNotice = function (notice) {
+    var el = this.el;
+    this._noticePending = null;
+    this._noticePriority = notice.priority || 0;
+    this._noticeShownAt = Date.now();
+
+    el.noticeUser.textContent = '@' + notice.user;
+    el.noticeDetail.textContent = notice.detail || '';
+    el.noticeDetail.style.display = notice.detail ? '' : 'none';
+    el.noticeEffect.textContent = notice.effect || '';
+
+    // クラスを付け直して、毎回ポップのアニメーションを最初から再生させる
+    var className = 'notice notice--' + (notice.kind || 'gift');
+    if (notice.team) className += ' notice--' + notice.team;
+    el.notice.className = className;
+    void el.notice.offsetWidth;
+    el.notice.classList.add('is-on');
+    el.stage.classList.add('noticed');
+
+    this._scheduleNotice(this.noticeConfig.durationMs);
+  };
+
+  Renderer.prototype._scheduleNotice = function (delay) {
+    var self = this;
+    clearTimeout(this._noticeTimer);
+    this._noticeTimer = setTimeout(function () {
+      if (self._noticePending) {
+        var next = self._noticePending;
+        self._noticePending = null;
+        self._paintNotice(next);
+      } else {
+        self.hideNotice();
+      }
+    }, Math.max(0, delay));
+  };
+
+  Renderer.prototype.hideNotice = function () {
+    clearTimeout(this._noticeTimer);
+    this._noticePending = null;
+    this._noticePriority = -1;
+    this._noticeShownAt = 0;
+    if (!this.el.notice) return;
+    this.el.notice.classList.remove('is-on');
+    this.el.stage.classList.remove('noticed');
+  };
+
+  // ---------------------------------------------------------------- fever
+
+  /**
+   * FEVER の状態表示。毎フレーム呼ばれます。
+   * 常時表示されるのは「FEVER 中かどうか」と「残り秒数」だけです。
+   */
+  Renderer.prototype.renderFever = function (fever) {
+    if (!this.el.fever) return;
+
+    var active = !!(fever && fever.active);
+    this.el.fever.classList.toggle('is-on', active);
+    this.el.stage.classList.toggle('fevered', active);
+
+    if (!active) { this._lastFeverSecond = null; return; }
+
+    var seconds = Math.ceil(fever.remainingMs / 1000);
+    if (seconds !== this._lastFeverSecond) {
+      this._lastFeverSecond = seconds;
+      this.el.feverTime.textContent = seconds + 's';
+    }
+    this.el.feverMult.textContent = '\u00d7' + fever.multiplier;
   };
 
   // -------------------------------------------------------------- effects
@@ -326,10 +436,6 @@
         setTimeout(function () { node.remove(); }, ms);
       })(piece, (duration + 0.8) * 1000);
     }
-  };
-
-  Renderer.prototype.setTicker = function (text) {
-    this.el.ticker.textContent = text || '';
   };
 
   global.KVB.Renderer = Renderer;

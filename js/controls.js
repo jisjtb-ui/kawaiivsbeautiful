@@ -26,13 +26,79 @@
     m: ['reset-match']
   };
 
-  function Controls(engine) {
+  /** TikTok イベント再現用のキー。押し手はランダムに選ばれます。 */
+  var TIKTOK_KEY_MAP = {
+    '1': ['comment', { text: 'A' }],
+    '2': ['comment', { text: 'B' }],
+    g:   ['gift',    { gift: 'Perfume' }],
+    k:   ['like',    { count: 20 }],
+    f:   ['follow',  {}]
+  };
+
+  /** TikTok イベントを再現するときの押し手。実配信での「@名前」に相当します。 */
+  var TEST_USERS = ['taro', 'hanako', 'ken', 'newbie', 'lurker'];
+
+  /**
+   * @param {object} engine   GameEngine (板の直接操作用)
+   * @param {object} [options] { router, liveId } TikTok イベントの再現用
+   */
+  function Controls(engine, options) {
+    options = options || {};
     this.engine = engine;
+    this.router = options.router || null;
+    this.liveId = options.liveId || 'live-1';
     this.panel = document.getElementById('controls');
     this._bindButtons();
     this._bindKeyboard();
     this._applyObsFlag();
   }
+
+  /**
+   * TikTok から来たことにしてイベントを 1 件流す。
+   * ゲーム側から見ると、実配信のイベントとまったく区別がつきません。
+   */
+  Controls.prototype.simulate = function (type, opts) {
+    if (!this.router) return null;
+    opts = opts || {};
+    var user = { uniqueId: opts.user || TEST_USERS[Math.floor(Math.random() * TEST_USERS.length)] };
+
+    switch (type) {
+      case 'gift':
+        return this.router.dispatch(this.liveId, {
+          type: 'gift', user: user, giftName: opts.gift || 'Rose', repeatCount: opts.repeat || 1
+        });
+      case 'like':
+        return this.router.dispatch(this.liveId, {
+          type: 'like', user: user, count: Number(opts.count) || 20
+        });
+      case 'follow':
+        return this.router.dispatch(this.liveId, { type: 'follow', user: user });
+      case 'comment':
+        return this.router.dispatch(this.liveId, {
+          type: 'chat', user: user, text: opts.text || 'A'
+        });
+      default:
+        return null;
+    }
+  };
+
+  /**
+   * 実配信の混み具合を再現する。通知が点滅せず 1 件ずつ読めるかの確認用。
+   */
+  Controls.prototype.burst = function (count) {
+    var self = this;
+    var total = count || 15;
+    for (var i = 0; i < total; i++) {
+      (function (index) {
+        setTimeout(function () {
+          var roll = Math.random();
+          if (roll < 0.45) self.simulate('like', { count: 100 });
+          else if (roll < 0.85) self.simulate('gift', { gift: Math.random() < 0.5 ? 'Rose' : 'Perfume' });
+          else self.simulate('follow', {});
+        }, index * 120);
+      })(i);
+    }
+  };
 
   /**
    * Single dispatch point for every test input.
@@ -48,6 +114,7 @@
       case 'attack':       this.engine.attack(team, amount, meta); break;
       case 'reset-round':  this.engine.resetRound(); break;
       case 'reset-match':  this.engine.resetMatch(); break;
+      case 'burst':        this.burst(); break;
       default: break;
     }
   };
@@ -57,6 +124,17 @@
     if (!this.panel) return;
 
     this.panel.addEventListener('click', function (event) {
+      var tiktokButton = event.target.closest('[data-tiktok]');
+      if (tiktokButton) {
+        self.simulate(tiktokButton.dataset.tiktok, {
+          user: tiktokButton.dataset.user,
+          gift: tiktokButton.dataset.gift,
+          count: tiktokButton.dataset.count,
+          text: tiktokButton.dataset.text
+        });
+        return;
+      }
+
       var button = event.target.closest('[data-action]');
       if (!button) return;
       self.dispatch(
@@ -77,6 +155,14 @@
 
       var key = event.key.toLowerCase();
       if (key === 'h') { self.togglePanel(); return; }
+      if (key === 'b') { event.preventDefault(); self.burst(); return; }
+
+      var tiktokKey = TIKTOK_KEY_MAP[key];
+      if (tiktokKey) {
+        event.preventDefault();
+        self.simulate(tiktokKey[0], tiktokKey[1]);
+        return;
+      }
 
       var mapped = KEY_MAP[key];
       if (!mapped) return;

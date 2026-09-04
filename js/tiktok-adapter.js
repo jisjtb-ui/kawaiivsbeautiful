@@ -1,84 +1,116 @@
 /**
- * tiktok-adapter.js - THE ONLY FILE THAT SHOULD EVER KNOW ABOUT TIKTOK.
+ * tiktok-adapter.js - TikTok の受信口。
  *
- * Right now it is a stub: no network code, no dependency, nothing runs
- * unless you call KVB.TikTokAdapter.connect() yourself. It exists so the
- * shape of the real integration is already decided:
+ *   TikTok Connector  ->  TikTokAdapter (ここ)  ->  EventRouter  ->  GameSession
  *
- *     TikTok gift event  ->  toBoards()  ->  engine.addBoards() / attack()
+ * このファイルは受け取ったイベントを EventRouter へ渡すだけで、
+ * ゲームのルールを一切持ちません。ギフトの価値づけもチーム分けも
+ * ここではなく config.js / event-router.js / game-session.js の仕事です。
  *
- * See README.md ("TikTok LIVE を接続する") for the wiring instructions.
+ * connect() を呼ばない限りネットワークアクセスは発生しません。
+ * 呼ばなければ従来どおり完全オフラインで動きます。
  */
 (function (global) {
   'use strict';
 
-  var TEAM = global.KVB.TEAM;
-
   /**
-   * Gift rules. `team` decides which tower the gift feeds; `boards` is how
-   * many boards one gift is worth; `attack` means it strips the opponent
-   * instead of stacking your own tower.
-   *
-   * Replace the gift names with the ones you actually use on stream.
+   * @param {object} router   EventRouter
+   * @param {object} [options] { liveId, url }
    */
-  var GIFT_RULES = {
-    // name (lowercase)   team                boards  attack
-    'rose':             { team: TEAM.KAWAII,    boards: 1 },
-    'finger heart':     { team: TEAM.KAWAII,    boards: 10 },
-    'sunglasses':       { team: TEAM.KAWAII,    boards: 50 },
-    'gg':               { team: TEAM.BEAUTIFUL, boards: 1 },
-    'perfume':          { team: TEAM.BEAUTIFUL, boards: 10 },
-    'galaxy':           { team: TEAM.BEAUTIFUL, boards: 50 },
-    'lightning bolt':   { team: TEAM.KAWAII,    boards: 10, attack: true },
-    'thunder':          { team: TEAM.BEAUTIFUL, boards: 10, attack: true }
-  };
-
-  function TikTokAdapter(engine, options) {
-    this.engine = engine;
+  function TikTokAdapter(router, options) {
+    this.router = router;
     this.options = options || {};
-    this.rules = this.options.rules || GIFT_RULES;
+    this.liveId = this.options.liveId || 'live-1';
+    this.socket = null;
     this.connected = false;
   }
 
   /**
-   * The single hand-off point between TikTok and the game.
-   * Feed it a normalised gift and it does the right thing.
+   * TikTok のイベントを 1 件流し込む唯一の入口。
+   * 手で叩いて動作確認もできます:
    *
-   * @param {object} gift { name, count, user }
+   *   KVB.tiktok.handleEvent({ type:'gift', user:{ uniqueId:'taro' }, giftName:'Rose' });
+   *   KVB.tiktok.handleEvent({ type:'like', user:{ uniqueId:'taro' }, count:100 });
+   *   KVB.tiktok.handleEvent({ type:'follow', user:{ uniqueId:'taro' } });
+   *   KVB.tiktok.handleEvent({ type:'chat', user:{ uniqueId:'taro' }, text:'A' });
    */
-  TikTokAdapter.prototype.handleGift = function (gift) {
-    var rule = this.rules[String(gift.name || '').toLowerCase()];
-    if (!rule) return false;                       // unmapped gift: ignore
-
-    var repeat = Math.max(1, Number(gift.count) || 1);
-    var amount = rule.boards * repeat;
-    var meta = { source: 'tiktok', user: gift.user || null, gift: gift.name, count: repeat };
-
-    if (rule.attack) {
-      this.engine.attack(rule.team, amount, meta);
-    } else {
-      this.engine.addBoards(rule.team, amount, meta);
-    }
-    return true;
+  TikTokAdapter.prototype.handleEvent = function (raw) {
+    return this.router.dispatch(this.liveId, raw);
   };
 
   /**
-   * Not implemented on purpose - the MVP runs offline.
-   *
-   * To go live, open a connection here (TikTok Live Connector via a small
-   * local server, a webhook, a WebSocket, ...) and call this.handleGift()
-   * for every incoming gift event. Nothing else in the project changes.
+   * 旧 API との互換。{ name, count, user } 形式のギフトも受け付けます。
    */
-  TikTokAdapter.prototype.connect = function () {
-    console.warn('[KVB] TikTokAdapter.connect() is a stub. ' +
-                 'See README.md for how to wire a real gift feed.');
-    return Promise.resolve(false);
+  TikTokAdapter.prototype.handleGift = function (gift) {
+    return this.handleEvent({
+      type: 'gift',
+      user: gift.user,
+      giftId: gift.giftId,
+      giftName: gift.giftName || gift.name,
+      repeatCount: gift.repeatCount || gift.count,
+      diamondCount: gift.diamondCount || gift.diamonds
+    });
+  };
+
+  /**
+   * WebSocket でイベントを受け取る。呼び出しは任意です。
+   *
+   * ブラウザから TikTok へ直接つなぐことはできないため、
+   * 別プロセス (tikhub の TikTok LIVE Event Server など) が受信した
+   * イベントを JSON 1 行ずつ中継してくる前提です。期待する形は
+   * handleEvent() のコメントと同じで、type は gift / like / follow / chat。
+   *
+   * @param {string} [url] 既定 ws://localhost:21213
+   */
+  TikTokAdapter.prototype.connect = function (url) {
+    var self = this;
+    var target = url || this.options.url || 'ws://localhost:21213';
+
+    return new Promise(function (resolve) {
+      var socket;
+      try {
+        socket = new global.WebSocket(target);
+      } catch (err) {
+        console.warn('[KVB] WebSocket を開けませんでした:', err.message);
+        resolve(false);
+        return;
+      }
+      self.socket = socket;
+
+      socket.onopen = function () {
+        self.connected = true;
+        console.info('[KVB] TikTok イベントの受信を開始しました:', target);
+        resolve(true);
+      };
+
+      socket.onmessage = function (event) {
+        var payload;
+        try {
+          payload = JSON.parse(event.data);
+        } catch (err) {
+          return;                       // 壊れた行は捨てる
+        }
+        // 1 件でも配列でも受け付ける
+        if (Array.isArray(payload)) payload.forEach(function (e) { self.handleEvent(e); });
+        else self.handleEvent(payload);
+      };
+
+      socket.onerror = function () {
+        if (!self.connected) resolve(false);
+      };
+
+      socket.onclose = function () {
+        self.connected = false;
+      };
+    });
   };
 
   TikTokAdapter.prototype.disconnect = function () {
+    if (this.socket) this.socket.close();
+    this.socket = null;
     this.connected = false;
   };
 
+  global.KVB = global.KVB || {};
   global.KVB.TikTokAdapter = TikTokAdapter;
-  global.KVB.GIFT_RULES = GIFT_RULES;
 })(window);

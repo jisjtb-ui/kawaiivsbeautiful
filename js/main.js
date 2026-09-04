@@ -1,15 +1,27 @@
 /**
- * main.js - boots the game and runs the clock.
+ * main.js - 起動と 1 本のループ。
  *
- * Wiring order:
- *   GameEngine (rules)  ->  Renderer (screen)  ->  Controls (test input)
- *   and an idle TikTokAdapter waiting to be connected.
+ * 組み立ての向きは一方向です:
+ *
+ *   TikTokAdapter -> EventRouter -> GameSession -> GameEngine -> Renderer
+ *
+ * GameEngine は TikTok を知らず、GameSession も TikTok を知りません
+ * (知っているのは TikTokAdapter と EventRouter だけ)。
+ *
+ * LIVE を増やすときは、LIVE ごとに engine + session を 1 組作って
+ * router.attach(liveId, session) するだけで並走させられます。
  */
 (function (global) {
   'use strict';
 
+  var LIVE_ID = 'live-1';
+
   document.addEventListener('DOMContentLoaded', function () {
-    var engine = new global.KVB.GameEngine({
+    var KVB = global.KVB;
+    var config = KVB.CONFIG;
+
+    // --- ゲームのルール (TikTok を知らない)
+    var engine = new KVB.GameEngine({
       targetBoards: 1000,
       holdSeconds: 10,
       roundsToWinMatch: 10,
@@ -17,21 +29,37 @@
       autoStartNextRound: true
     });
 
-    var renderer = new global.KVB.Renderer(engine);
-    var controls = new global.KVB.Controls(engine);
-    var tiktok = new global.KVB.TikTokAdapter(engine);
+    // --- 1 LIVE = 1 セッション。チーム所属 / LIKE 累積 / FEVER を持つ。
+    var session = new KVB.GameSession(engine, { config: config, liveId: LIVE_ID });
 
-    // Exposed for the console, for OBS scripts and for the future TikTok feed.
+    // --- TikTok イベント -> ゲームイベント の翻訳と振り分け
+    var router = new KVB.EventRouter({ config: config });
+    router.attach(LIVE_ID, session);
+
+    // --- 画面
+    var renderer = new KVB.Renderer(engine, { notice: config.notice });
+    var controls = new KVB.Controls(engine, { router: router, liveId: LIVE_ID });
+    var tiktok = new KVB.TikTokAdapter(router, { liveId: LIVE_ID });
+
+    // セッションが出す「重要イベントの一時通知」だけを画面へ渡す。
+    // Renderer はセッションの中身を知らず、通知を受け取って描くだけ。
+    session.on('notice', function (notice) { renderer.showNotice(notice); });
+
+    // コンソール / OBS スクリプト / 将来の TikTok 接続から触れるように公開する
     global.KVB.engine = engine;
+    global.KVB.session = session;
+    global.KVB.router = router;
     global.KVB.renderer = renderer;
     global.KVB.controls = controls;
     global.KVB.tiktok = tiktok;
+    global.KVB.LIVE_ID = LIVE_ID;
 
-    // One clock for everything: the engine advances, the renderer redraws.
-    // The engine keeps its own Date.now() based clock, so no time is passed in.
+    // 全部を 1 本の時計で回す
     function loop() {
       engine.update();
+      session.update();
       renderer.renderCountdown(engine.countdown, engine.config.holdSeconds);
+      renderer.renderFever(session.getFever());
       global.requestAnimationFrame(loop);
     }
     global.requestAnimationFrame(loop);

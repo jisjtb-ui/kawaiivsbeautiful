@@ -51,7 +51,6 @@
         <div class="team__label">KAWAII</div>
         <div class="team__count">
           <span class="team__count-value" id="count-kawaii">0</span>
-          <span class="team__count-unit">/ 1000</span>
         </div>
       </section>
 
@@ -61,6 +60,13 @@
           <span class="center__word center__word--kawaii">KAWAII</span>
           <span class="center__vs">VS</span>
           <span class="center__word center__word--beautiful">BEAUTIFUL</span>
+        </div>
+
+        <!-- 一時通知: 常時ではなく、重要イベントのときだけ 1 件出して消える -->
+        <div class="notice" id="notice" aria-hidden="true">
+          <div class="notice__user" id="notice-user"></div>
+          <div class="notice__detail" id="notice-detail"></div>
+          <div class="notice__effect" id="notice-effect"></div>
         </div>
 
         <div class="countdown" id="countdown" aria-hidden="true">
@@ -90,7 +96,6 @@
         <div class="team__label">BEAUTIFUL</div>
         <div class="team__count">
           <span class="team__count-value" id="count-beautiful">0</span>
-          <span class="team__count-unit">/ 1000</span>
         </div>
       </section>
 
@@ -105,7 +110,11 @@
     <div class="flash" id="flash"></div>
     <div class="confetti" id="confetti"></div>
 
-    <footer class="ticker" id="ticker"></footer>
+    <!-- FEVER: 常時見えている必要がある 4 つ目の情報 -->
+    <div class="fever" id="fever" aria-hidden="true">
+      <div class="fever__label">FEVER <b class="fever__mult" id="fever-mult">&times;2</b></div>
+      <div class="fever__time" id="fever-time">0s</div>
+    </div>
   </div>
 </div>
 
@@ -120,6 +129,29 @@
   </div>
 
   <div class="controls__grid">
+    <!-- TikTok から来るイベントをそのまま再現する。押すと EventRouter へ入る。 -->
+    <div class="controls__group controls__group--tiktok">
+      <h3>TIKTOK EVENTS <small>@taro</small></h3>
+      <button type="button" class="btn btn--kawaii"    data-tiktok="comment" data-user="taro" data-text="A">COMMENT &ldquo;A&rdquo; <small>join KAWAII</small></button>
+      <button type="button" class="btn btn--beautiful" data-tiktok="comment" data-user="taro" data-text="B">COMMENT &ldquo;B&rdquo; <small>join BEAUTIFUL</small></button>
+      <button type="button" class="btn btn--gift"      data-tiktok="gift" data-user="taro" data-gift="Rose">GIFT Rose <small>1 pt</small></button>
+      <button type="button" class="btn btn--gift"      data-tiktok="gift" data-user="taro" data-gift="Galaxy">GIFT Galaxy <small>100 pt</small></button>
+      <button type="button" class="btn btn--like"      data-tiktok="like" data-user="taro" data-count="20">LIKE +20</button>
+      <button type="button" class="btn btn--like"      data-tiktok="like" data-user="taro" data-count="100">LIKE +100 <small>milestone</small></button>
+      <button type="button" class="btn btn--fever"     data-tiktok="follow" data-user="taro">FOLLOW <small>FEVER</small></button>
+    </div>
+
+    <div class="controls__group controls__group--tiktok">
+      <h3>TIKTOK EVENTS <small>others</small></h3>
+      <button type="button" class="btn btn--kawaii"    data-tiktok="comment" data-user="hanako" data-text="A">@hanako &ldquo;A&rdquo;</button>
+      <button type="button" class="btn btn--beautiful" data-tiktok="comment" data-user="ken" data-text="B">@ken &ldquo;B&rdquo;</button>
+      <button type="button" class="btn btn--gift"      data-tiktok="gift" data-user="hanako" data-gift="Perfume">@hanako GIFT <small>20 pt</small></button>
+      <button type="button" class="btn btn--like"      data-tiktok="like" data-user="ken" data-count="100">@ken LIKE +100</button>
+      <button type="button" class="btn btn--fever"     data-tiktok="follow" data-user="hanako">@hanako FOLLOW</button>
+      <button type="button" class="btn btn--ghost"     data-tiktok="gift" data-user="newbie" data-gift="Rose">@newbie GIFT <small>random team</small></button>
+      <button type="button" class="btn btn--ghost"     data-action="burst">BURST <small>15 events</small></button>
+    </div>
+
     <div class="controls__group controls__group--kawaii">
       <h3>KAWAII</h3>
       <button type="button" class="btn btn--kawaii" data-action="add" data-team="kawaii" data-amount="1">KAWAII +1</button>
@@ -146,14 +178,19 @@
   </div>
 
   <p class="controls__hint">
-    Keyboard: <b>Q/W/E</b> KAWAII +1/+10/+50 &middot; <b>A</b> KAWAII ATTACK &middot;
+    TikTok: <b>1</b>/<b>2</b> comment A/B &middot; <b>G</b> gift &middot; <b>K</b> like +20 &middot;
+    <b>F</b> follow (FEVER) &middot; <b>B</b> burst<br>
+    Engine: <b>Q/W/E</b> KAWAII +1/+10/+50 &middot; <b>A</b> KAWAII ATTACK &middot;
     <b>I/O/P</b> BEAUTIFUL +1/+10/+50 &middot; <b>L</b> BEAUTIFUL ATTACK &middot;
     <b>R</b> reset round &middot; <b>M</b> reset match &middot; <b>H</b> hide panel
   </p>
 </div>
 
 <!-- load order matters: logic -> view -> input -> boot -->
+<script src="js/config.js"></script>
 <script src="js/game.js"></script>
+<script src="js/game-session.js"></script>
+<script src="js/event-router.js"></script>
 <script src="js/renderer.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/tiktok-adapter.js"></script>

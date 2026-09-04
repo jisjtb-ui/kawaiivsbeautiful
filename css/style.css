@@ -351,6 +351,8 @@ body.obs-mode .controls { display: none; }
 }
 
 .center__title {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -389,8 +391,9 @@ body.obs-mode .controls { display: none; }
 }
 .countdown.is-on { opacity: 1; visibility: visible; }
 .stage.counting .center__title,
+.stage.noticed .center__title,
 .stage.bannered .center__title { opacity: 0; transform: scale(0.9); }
-.stage.bannered .ticker { opacity: 0; }
+.stage.noticed .center__title { transition-duration: 0.08s; }
 
 .countdown__label {
   font-size: 40px;
@@ -526,19 +529,6 @@ body.obs-mode .controls { display: none; }
   100% { transform: translateY(1180px) rotate(720deg); }
 }
 
-.ticker {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 14px;
-  text-align: center;
-  font-size: 24px;
-  letter-spacing: 6px;
-  opacity: 0.4;
-  z-index: 6;
-  height: 30px;
-  transition: opacity 0.3s ease;
-}
 
 /* ------------------------------------------------------- test controls */
 
@@ -634,3 +624,151 @@ body.obs-mode .controls { display: none; }
     transition: none !important;
   }
 }
+
+
+/* =========================================================================
+   NOTICE - 重要イベントの一時通知
+   常時 1 件だけ。ログのように積み上げない。誰が / 何を / 影響 の 3 行だけ。
+   ========================================================================= */
+
+.notice {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 7;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.notice.is-on {
+  opacity: 1;
+  visibility: visible;
+  animation: notice-pop 0.26s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+/* 背後の演出に負けないよう、通知の下だけ暗く落とす */
+.notice::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 900px;
+  height: 520px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center,
+              rgba(0, 0, 0, 0.82) 0%,
+              rgba(0, 0, 0, 0.62) 45%,
+              rgba(0, 0, 0, 0) 72%);
+  z-index: -1;
+}
+
+@keyframes notice-pop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 誰が: 名前は読めれば十分なので、効果より小さく抑える */
+.notice__user {
+  font-size: 62px;
+  letter-spacing: 2px;
+  color: #ffffff;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.95);
+  max-width: 620px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 何が: 100 LIKE のような補足。無いときは JS 側で非表示にする */
+.notice__detail {
+  font-size: 44px;
+  letter-spacing: 6px;
+  opacity: 0.75;
+}
+
+/* 影響: これが一番大きい。1 秒で読ませたいのはこの行 */
+.notice__effect {
+  font-size: 130px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 40px currentColor, 0 6px 30px rgba(0, 0, 0, 0.8);
+}
+
+.notice--kawaii    .notice__effect { color: var(--kawaii-2); }
+.notice--beautiful .notice__effect { color: var(--beautiful-2); }
+.notice--fever     .notice__effect { color: #ffd83d; font-size: 104px; }
+.notice--like      .notice__effect { font-size: 112px; }
+
+/* カウントダウン中はダイヤルを隠さないよう、通知を下へ逃がして少し縮める */
+.stage.counting .notice {
+  transform: translateY(320px) scale(0.62);
+}
+.stage.counting .notice.is-on { animation: none; }
+
+/* ラウンド勝利などの大きな瞬間は通知より優先する */
+.stage.bannered .notice { opacity: 0; }
+
+/* =========================================================================
+   FEVER - 常時表示する 4 つ目の情報
+   ========================================================================= */
+
+.fever {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1;
+  z-index: 6;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease;
+}
+.fever.is-on { opacity: 1; visibility: visible; }
+
+.fever__label {
+  font-size: 46px;
+  letter-spacing: 10px;
+  color: #ffd83d;
+  text-shadow: 0 0 30px rgba(255, 216, 61, 0.9);
+  animation: fever-glow 0.9s ease-in-out infinite;
+}
+.fever__mult { font-size: 56px; }
+
+.fever__time {
+  font-size: 38px;
+  letter-spacing: 4px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+@keyframes fever-glow {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.05); }
+}
+
+/* FEVER 中は画面全体をわずかに温める。文字を足さずに状態を伝えるため */
+.stage.fevered .bg-glow { animation-duration: 1.2s; }
+.stage.fevered::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: inset 0 0 200px rgba(255, 216, 61, 0.22);
+}
+
+/* テストパネルの TikTok イベント用ボタン */
+.controls__group--tiktok h3 { color: #ffd83d; }
+.btn--gift  { background: linear-gradient(180deg, #7a4dff, #4a2bb0); }
+.btn--like  { background: linear-gradient(180deg, #ff7ab8, #b03c74); }
+.btn--fever { background: linear-gradient(180deg, #ffd83d, #b58a00); color: #201500; }
