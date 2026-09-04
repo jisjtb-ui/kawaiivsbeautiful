@@ -43,18 +43,55 @@ test('ラウンドが変わると所属と LIKE の貯金がリセットされ�
   assert.deepStrictEqual(t.session.likeBuckets, {});
 });
 
-test('未所属ユーザーの GIFT はランダムに所属が決まり、そのチームに入る', () => {
+test('未所属ユーザーの GIFT はランダムなチームへ入るが、所属はさせない', () => {
   const toB = setup({ random: () => 0.9 });   // 0.5 以上なら B
   toB.send({ type: 'gift', user: { uniqueId: 'taro' }, giftId: 5655, diamondCount: 1 });
-  assert.strictEqual(toB.session.teamOf('taro'), 'beautiful');
-  assert.strictEqual(toB.engine.getState().boards.beautiful, 1);
+
+  assert.strictEqual(toB.engine.getState().boards.beautiful, 1, '効果は入る');
   assert.strictEqual(toB.engine.getState().boards.kawaii, 0);
+  assert.strictEqual(toB.session.teamOf('taro'), null, '所属はしない');
+  assert.deepStrictEqual(toB.session.members, {});
 });
 
-test('未所属ユーザーの LIKE も同じくランダム所属になる', () => {
+test('未所属ユーザーの LIKE も同じく、効果だけがランダムに入る', () => {
   const t = setup({ random: () => 0.9 });
-  t.send({ type: 'like', user: { uniqueId: 'taro' }, count: 10 });
-  assert.strictEqual(t.session.teamOf('taro'), 'beautiful');
+  t.send({ type: 'like', user: { uniqueId: 'taro' }, count: 100 });
+
+  assert.strictEqual(t.engine.getState().boards.beautiful, 1);
+  assert.strictEqual(t.session.teamOf('taro'), null, '所属はしない');
+});
+
+test('未所属ユーザーのギフトは 1 件ごとに抽選され、両チームへばらける', () => {
+  // 0.1 -> A, 0.9 -> B を交互に返す
+  let flip = 0;
+  const t = setup({ random: () => (flip++ % 2 === 0 ? 0.1 : 0.9) });
+
+  for (let i = 0; i < 4; i++) {
+    t.send({ type: 'gift', user: { uniqueId: 'taro' }, giftId: 5658, diamondCount: 20 });
+  }
+  assert.deepStrictEqual(t.engine.getState().boards, { kawaii: 40, beautiful: 40 });
+  assert.strictEqual(t.session.teamOf('taro'), null, '何回送っても所属はしない');
+});
+
+test('コメントで所属したあとは、ギフトが必ずそのチームへ入る', () => {
+  const t = setup({ random: () => 0.9 });     // 抽選なら必ず B になる条件
+  t.send({ type: 'gift', user: { uniqueId: 'taro' }, giftId: 5658, diamondCount: 20 });
+  assert.strictEqual(t.engine.getState().boards.beautiful, 20, '所属前は抽選');
+
+  t.send({ type: 'chat', user: { uniqueId: 'taro' }, text: 'A' });
+  t.send({ type: 'gift', user: { uniqueId: 'taro' }, giftId: 5658, diamondCount: 20 });
+  assert.strictEqual(t.engine.getState().boards.kawaii, 20, '所属後は抽選されない');
+  assert.strictEqual(t.engine.getState().boards.beautiful, 20, 'B は増えていない');
+});
+
+test('所属前に貯めた LIKE の端数は、所属後もそのまま引き継がれる', () => {
+  const t = setup({ random: () => 0.9 });
+  t.send({ type: 'like', user: { uniqueId: 'taro' }, count: 90 });   // 未所属で 90 貯める
+  assert.strictEqual(t.engine.getState().boards.kawaii, 0);
+
+  t.send({ type: 'chat', user: { uniqueId: 'taro' }, text: 'A' });
+  t.send({ type: 'like', user: { uniqueId: 'taro' }, count: 10 });   // 合計 100
+  assert.strictEqual(t.engine.getState().boards.kawaii, 1, '所属先の A へ入る');
 });
 
 // -------------------------------------------------------------- GIFT
@@ -321,13 +358,13 @@ test('攻撃ギフト以外はこれまでどおり板を積む', () => {
   assert.strictEqual(t.engine.getState().boards.kawaii, 1);
 });
 
-test('攻撃ギフトでもチーム未所属ならランダムに所属が決まる', () => {
-  const t = setup({ random: () => 0.9 });          // B に所属
+test('未所属ユーザーの攻撃ギフトも、抽選した側の相手を剥がす (所属はしない)', () => {
+  const t = setup({ random: () => 0.9 });          // 抽選は B
   t.engine.addBoards('kawaii', 500, { source: 'setup' });
 
   t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, BANANA));
-  assert.strictEqual(t.session.teamOf('taro'), 'beautiful');
-  assert.strictEqual(t.engine.getState().boards.kawaii, 490, '相手 (A) が剥がされる');
+  assert.strictEqual(t.engine.getState().boards.kawaii, 490, 'B の相手 = A が剥がされる');
+  assert.strictEqual(t.session.teamOf('taro'), null, '所属はしない');
 });
 
 test('攻撃ギフトはカウントダウンを解除できる', () => {

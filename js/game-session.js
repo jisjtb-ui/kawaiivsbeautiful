@@ -117,11 +117,24 @@
     return member ? member.team : null;
   };
 
-  /** 未所属ならランダムに決めて所属させる。所属済みならそのチームを返す。 */
-  GameSession.prototype.resolveTeam = function (user) {
-    var existing = this.members[this.userKey(user)];
-    if (existing) return existing.team;
-    return this.joinTeam(user, this.random() < 0.5 ? this.teamA : this.teamB, 'random').team;
+  /**
+   * このイベントの効果をどちらのチームへ入れるか。
+   *
+   *   所属済み … そのチーム
+   *   未所属   … このイベント限りのランダム
+   *
+   * 未所属ユーザーをここで所属させることはしません。
+   * **所属が決まるのは "A" / "B" のコメントだけ**です。
+   * ギフトやいいねを先に送っただけの人が、意図しないチームに固定されて
+   * 後からコメントしても動かせない、という状態を作らないためです。
+   *
+   * そのため未所属ユーザーが 10 回ギフトを送れば、10 回とも別々に抽選され、
+   * 両チームへばらけていきます。
+   */
+  GameSession.prototype.teamForEvent = function (user) {
+    var member = this.members[this.userKey(user)];
+    if (member) return member.team;
+    return this.random() < 0.5 ? this.teamA : this.teamB;
   };
 
   /**
@@ -282,7 +295,7 @@
   };
 
   GameSession.prototype._handleGift = function (event) {
-    var team = this.resolveTeam(event.user);
+    var team = this.teamForEvent(event.user);
     if (event.effect === 'attack') return this._handleAttack(event, team);
 
     var boards = Math.floor(event.points * this.config.gifts.boardsPerPoint * this.multiplier());
@@ -328,7 +341,7 @@
 
   GameSession.prototype._handleLike = function (event) {
     var cfg = this.config.likes;
-    var team = this.resolveTeam(event.user);
+    var team = this.teamForEvent(event.user);
     var key = cfg.scope === 'team' ? ('team:' + team) : ('user:' + this.userKey(event.user));
 
     this.stats.likes += event.count;
