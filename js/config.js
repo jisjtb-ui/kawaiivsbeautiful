@@ -52,28 +52,37 @@
       /** FEVER 中、板の加算に掛かる倍率。 */
       multiplier: 2,
       /** 残り時間の上限。0 = 上限なし (延長し放題)。 */
-      maxDurationMs: 0
+      maxDurationMs: 0,
+
+      /**
+       * FEVER の倍率を攻撃ギフトにも掛けるか。
+       * 既定は false (FEVER は「板の加算」だけを強化する)。
+       */
+      multiplyAttack: false
     },
 
     gifts: {
       /**
        * giftId -> ゲーム内ポイント。最優先で参照されます。
-       * TikTok のギフト ID は配信で実際に飛んできたものを見て埋めてください。
+       *
+       * 空でかまいません。ダイヤ数は GIFT イベント本体に乗ってくるので、
+       * 表に無いギフトは下の diamondsToPoints で自動換算されます
+       * (JP だけで 689 種あり、全部書き出す意味はありません)。
+       * ここに書くのは「ダイヤ数と違う価値を意図的に付けたい」ギフトだけです。
+       *
+       * 一覧は  npm run gifts -- JP  で取得できます。
        */
       byId: {},
 
       /**
        * ギフト名 (小文字) -> ゲーム内ポイント。byId に無いときに参照されます。
+       *
+       * 注意: 同じ名前で giftId も価値も違うギフトが実在します
+       * (例: Red Lightning は 1 ダイヤと 12000 ダイヤの 2 種類)。
+       * 名前で書くと両方に当たってしまうので、特別扱いは byId を使ってください。
+       *   npm run gifts -- JP --dupes  で重複している名前を確認できます。
        */
-      byName: {
-        'rose': 1,
-        'tiktok': 1,
-        'heart me': 1,
-        'finger heart': 5,
-        'perfume': 20,
-        'sunglasses': 30,
-        'galaxy': 100
-      },
+      byName: {},
 
       /**
        * 上のどちらにも無いギフトは、ダイヤ数 x この係数をポイントにします。
@@ -83,7 +92,20 @@
       defaultPoints: 1,
 
       /** ポイント -> 板の枚数。 */
-      boardsPerPoint: 1
+      boardsPerPoint: 1,
+
+      /**
+       * 相手の板を剥がす「攻撃ギフト」。名前ではなく giftId で指定します。
+       *   59314 = Banana Peel (10 ダイヤ / 連打可 / JP・US 共通)
+       *
+       * 攻撃はカウントダウンを解除させる唯一の手段です。板を 1 枚でも剥がせば
+       * 保持側が勝利ラインを割るため、10 秒の維持を妨害できます。
+       */
+      attackGiftIds: [59314],
+      attackGiftNames: [],
+
+      /** 攻撃ギフトの ポイント -> 剥がす枚数。 */
+      attackBoardsPerPoint: 1
     },
 
     notice: {
@@ -96,6 +118,7 @@
       minVisibleMs: 700,
       /** 大きい方が優先。優先度が高い通知は最低表示時間を待たずに割り込みます。 */
       priority: {
+        attack: 3,
         fever: 3,
         gift: 2,
         like: 1

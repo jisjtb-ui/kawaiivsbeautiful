@@ -247,7 +247,7 @@
         total: this.boards[team],
         meta: meta || null
       });
-      this.emit('board:break', { team: team, amount: applied });
+      this.emit('board:break', { team: team, amount: applied, meta: meta || null });
     }
 
     this._evaluate();

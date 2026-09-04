@@ -114,6 +114,26 @@
     return unit * repeat;
   };
 
+  /**
+   * このギフトが「攻撃ギフト」かどうか。
+   *
+   * giftId で持つ判断なので、TikTok を知っているこの層で決めます。
+   * 下流には 'attack' / 'add' という結果だけを渡し、giftId は流しません。
+   */
+  EventRouter.prototype.giftEffect = function (raw) {
+    var gifts = this.config.gifts;
+    var ids = gifts.attackGiftIds || [];
+    var names = gifts.attackGiftNames || [];
+
+    var id = raw.giftId != null ? Number(raw.giftId) : null;
+    if (id != null && ids.indexOf(id) !== -1) return 'attack';
+
+    var name = String(raw.giftName || raw.name || '').trim().toLowerCase();
+    if (name && names.indexOf(name) !== -1) return 'attack';
+
+    return 'add';
+  };
+
   // ------------------------------------------------------------ dispatch
 
   /**
@@ -157,7 +177,13 @@
       case 'gift': {
         var points = this.giftToPoints(raw);
         if (points <= 0) return null;
-        return { type: GAME_EVENT.GIFT, user: readUser(raw), points: points, at: at };
+        return {
+          type: GAME_EVENT.GIFT,
+          user: readUser(raw),
+          points: points,
+          effect: this.giftEffect(raw),
+          at: at
+        };
       }
       case 'like': {
         var count = toPositiveInt(raw.count != null ? raw.count : raw.likeCount, 1);

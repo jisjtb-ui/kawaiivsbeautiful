@@ -76,6 +76,7 @@
     this._noticeShownAt = 0;
     this._noticePriority = -1;
     this._lastFeverSecond = null;
+    this._lastBreak = null;
 
     this._bindStageScaling();
     this._bindEngine();
@@ -126,9 +127,20 @@
     });
 
     engine.on('board:break', function (data) {
+      self.fireFlash(true);
+
+      // 攻撃ギフトによる剥がしは「@誰が -N」の通知で見せる。
+      // ここでバナーも出すと同じ出来事が 2 か所に出て、通知が隠れてしまう。
+      if (data.meta && data.meta.source === 'tiktok') {
+        // ただしカウントダウン解除まで起きた場合は、バナーが通知を覆って
+        // 「誰の攻撃で止まったのか」が見えなくなる。直後の解除で使えるよう控える。
+        self._lastBreak = { user: data.meta.user, amount: data.amount, at: Date.now() };
+        return;
+      }
+
+      self._lastBreak = null;
       self.showBanner('BOARD BREAK', TEAM_LABEL[data.team] + ' -' + data.amount,
         { variant: 'danger', duration: 900, priority: 1 });
-      self.fireFlash(true);
     });
 
     engine.on('countdown:start', function (data) {
@@ -159,7 +171,11 @@
       // CANCELLED の表示も出さない。続く countdown:start 側で見せる。
       if (data.takenBy) return;
 
-      self.showBanner('COUNTDOWN CANCELLED', TEAM_LABEL[data.team] + ' ' + data.boards,
+      // 直前の剥がしが原因なら、その攻撃者を副題に出す。
+      // board:break -> countdown:cancel は同じ操作の中で続けて飛んでくる。
+      var cause = self._lastBreak && (Date.now() - self._lastBreak.at) < 500 ? self._lastBreak : null;
+      self.showBanner('COUNTDOWN CANCELLED',
+        cause ? '@' + cause.user + ' -' + cause.amount : TEAM_LABEL[data.team] + ' ' + data.boards,
         { variant: 'danger', duration: 1500, priority: 3 });
       self.fireFlash(true);
     });

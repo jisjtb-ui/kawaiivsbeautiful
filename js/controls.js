@@ -30,7 +30,8 @@
   var TIKTOK_KEY_MAP = {
     '1': ['comment', { text: 'A' }],
     '2': ['comment', { text: 'B' }],
-    g:   ['gift',    { gift: 'Perfume' }],
+    g:   ['gift',    { giftId: 5658, diamonds: 20 }],    // Perfume
+    x:   ['gift',    { giftId: 59314, diamonds: 10 }],   // Banana Peel = 攻撃
     k:   ['like',    { count: 20 }],
     f:   ['follow',  {}]
   };
@@ -65,7 +66,13 @@
     switch (type) {
       case 'gift':
         return this.router.dispatch(this.liveId, {
-          type: 'gift', user: user, giftName: opts.gift || 'Rose', repeatCount: opts.repeat || 1
+          type: 'gift',
+          user: user,
+          // 実配信の GIFT イベントと同じ形。ダイヤ数は本体に乗ってくる。
+          giftId: opts.giftId != null ? Number(opts.giftId) : 5655,     // 既定は Rose
+          giftName: opts.gift || null,
+          diamondCount: opts.diamonds != null ? Number(opts.diamonds) : 1,
+          repeatCount: opts.repeat || 1
         });
       case 'like':
         return this.router.dispatch(this.liveId, {
@@ -92,8 +99,10 @@
       (function (index) {
         setTimeout(function () {
           var roll = Math.random();
-          if (roll < 0.45) self.simulate('like', { count: 100 });
-          else if (roll < 0.85) self.simulate('gift', { gift: Math.random() < 0.5 ? 'Rose' : 'Perfume' });
+          if (roll < 0.40) self.simulate('like', { count: 100 });
+          else if (roll < 0.70) self.simulate('gift', { giftId: 5655, diamonds: 1 });
+          else if (roll < 0.85) self.simulate('gift', { giftId: 5658, diamonds: 20 });
+          else if (roll < 0.95) self.simulate('gift', { giftId: 59314, diamonds: 10 });
           else self.simulate('follow', {});
         }, index * 120);
       })(i);
@@ -128,7 +137,8 @@
       if (tiktokButton) {
         self.simulate(tiktokButton.dataset.tiktok, {
           user: tiktokButton.dataset.user,
-          gift: tiktokButton.dataset.gift,
+          giftId: tiktokButton.dataset.giftId,
+          diamonds: tiktokButton.dataset.diamonds,
           count: tiktokButton.dataset.count,
           text: tiktokButton.dataset.text
         });

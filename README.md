@@ -27,7 +27,8 @@ python3 -m http.server 8000
 ルールのテスト:
 
 ```
-npm test        # 49 件。ブラウザ不要
+npm test        # 59 件。ブラウザ不要
+npm run gifts   # TikTok のギフト一覧を取得（後述）
 ```
 
 ---
@@ -39,6 +40,7 @@ npm test        # 49 件。ブラウザ不要
 | コメントに **`A`** | KAWAII に参加 |
 | コメントに **`B`** | BEAUTIFUL に参加 |
 | **ギフト** | 自分のチームの板が増える（ギフトの価値ぶん） |
+| **Banana Peel**（攻撃ギフト） | **相手チームの板を 10 枚剥がす** |
 | **いいね 100 回** | 自分のチームの板が 1 枚増える |
 | **フォロー** | **FEVER** 発動。A/B 両方の板の増え方が 2 倍になる |
 
@@ -55,6 +57,10 @@ npm test        # 49 件。ブラウザ不要
 
 試合の進行そのもの（1000 枚 → 10 秒維持 → ラウンド勝利 → 先に 10 ラウンドで試合勝利）は
 これまでどおりです。
+
+攻撃ギフト（`Banana Peel` / 10 ダイヤ / 連打可）だけは、自分の板を増やさず
+**相手の板を剥がします**。カウントダウンを止められる唯一の手段です。
+どのギフトを攻撃にするかは `js/config.js` の `gifts.attackGiftIds` で変えられます。
 
 カウントダウンの取り合いは次のようになります。
 
@@ -134,10 +140,13 @@ npm test        # 49 件。ブラウザ不要
 | `fever.extendMs` | `15000` | フォロー 1 回あたりの延長 |
 | `fever.multiplier` | `2` | FEVER 中の板の倍率 |
 | `fever.maxDurationMs` | `0` | 残り時間の上限（0 = 上限なし） |
-| `gifts.byId` | `{}` | **giftId → ゲーム内ポイント**（最優先） |
-| `gifts.byName` | Rose=1, Galaxy=100 … | ギフト名 → ポイント |
+| `gifts.byId` | `{}` | **giftId → ゲーム内ポイント**（最優先。空でよい） |
+| `gifts.byName` | `{}` | ギフト名 → ポイント（重複名があるので非推奨） |
 | `gifts.diamondsToPoints` | `1` | 表に無いギフトは ダイヤ数 × これ |
 | `gifts.boardsPerPoint` | `1` | ポイント → 板の枚数 |
+| `gifts.attackGiftIds` | `[59314]` | 相手の板を剥がすギフト（Banana Peel） |
+| `gifts.attackBoardsPerPoint` | `1` | 攻撃の ポイント → 剥がす枚数 |
+| `fever.multiplyAttack` | `false` | FEVER の倍率を攻撃にも掛けるか |
 | `notice.durationMs` | `1600` | 通知の表示時間 |
 | `notice.minVisibleMs` | `700` | 次の通知に差し替えるまでの最低表示時間 |
 | `notice.priority` | fever 3 / gift 2 / like 1 | 割り込みの強さ |
@@ -152,8 +161,14 @@ giftId  →  gamePoint  →  board amount
 ```
 
 `byId` → `byName` → `ダイヤ数 × 係数` → `defaultPoints` の順に解決します。
-実配信で飛んできたギフト ID を `byId` に足していけば、
-ほかのコードを触らずに価値を調整できます。
+
+**表は空のままで構いません。** ダイヤ数は GIFT イベント本体に乗ってくるので、
+JP の 689 種すべてが自動的に正しい価値になります。`byId` に書くのは
+「ダイヤ数と違う価値を意図的に付けたい」ギフトだけです。
+
+> **`byName` は避けてください。** 同じ名前で価値が全く違うギフトが実在します。
+> 例: `Red Lightning` は **1 ダイヤ**（59313）と **12000 ダイヤ**（8419）の 2 種類。
+> `npm run gifts -- JP --dupes` で重複している 26 組を確認できます。
 
 試合そのものの設定（1000 枚 / 10 秒 / 10 ラウンド）は `js/main.js` の
 `new KVB.GameEngine({...})` にあります。
@@ -213,6 +228,7 @@ js/tiktok-adapter.js      # TikTok の受信口
 js/renderer.js            # 画面描画（engine とセッションの通知を読むだけ）
 js/controls.js            # テスト入力（TikTok イベントの再現 + 板の直接操作）
 js/main.js                # 起動と 1 本のループ
+tools/fetch-gifts.js      # ギフトカタログの取得（giftId / 名前 / ダイヤ数）
 test/                     # ルールのテスト（node --test）
 ```
 
@@ -227,6 +243,7 @@ test/                     # ルールのテスト（node --test）
 | --- | --- | --- |
 | コメント `A` / `B` | `1` / `2` | チームに参加 |
 | ギフト | `G` | 板が増える + `@user +N` の通知 |
+| 攻撃ギフト | `X` | 相手の板が減る + `@user -N` の通知（赤） |
 | いいね +20 | `K` | 5 回で 100 に到達 → `100 LIKE +1` の通知 |
 | フォロー | `F` | FEVER 開始 / +15 秒延長 |
 | バースト | `B` | 15 件を連続で流す（通知が点滅しないかの確認用） |
@@ -249,7 +266,37 @@ KVB.engine.getState();
 
 ---
 
-## 8. OBS ブラウザソース設定
+## 8. ギフト一覧を調べる
+
+TikTok のギフトは増減するので、設定を見直すときは実物を取得してください。
+Euler Stream の公開エンドポイントを使うので **API キーは不要**です。
+
+```bash
+npm run gifts                    # JP のカタログを安い順に表示（689 種）
+npm run gifts -- US              # 地域を変える（US/GB/DE/ES/BE/FR/CA/JP/BR/MX）
+npm run gifts -- JP --max=10     # 10 ダイヤ以下だけ
+npm run gifts -- JP --find=rose  # 名前で絞り込む
+npm run gifts -- JP --dupes      # 名前が重複しているギフト
+npm run gifts -- JP --json       # config.gifts.byId に貼れる形で出力
+```
+
+```
+JP のギフト: 689 種
+ダイヤ数の分布: 1=49  2-10=46  11-100=52  101-1000=327  1001+=215
+
+  giftId  name                             diamond  連打
+    5655  Rose                                   1  ◯
+    5487  Finger Heart                           5  ◯
+   59314  Banana Peel                           10  ◯
+    5658  Perfume                               20  ◯
+   11046  Galaxy                              1000  ◯
+```
+
+**地域によってギフトが違います。** JP 限定が 63 種、US 限定が 91 種あります。
+
+---
+
+## 9. OBS ブラウザソース設定
 
 1. ソース → **ブラウザ** を追加
 2. **ローカルファイル** にチェック → `index.html` を選択
@@ -262,7 +309,7 @@ KVB.engine.getState();
 
 ---
 
-## 9. TikTok LIVE につなぐ
+## 10. TikTok LIVE につなぐ
 
 ブラウザから TikTok へ直接つなぐことはできません。
 別プロセスでイベントを受信し、WebSocket でブラウザへ中継します。
@@ -291,7 +338,7 @@ KVB.tiktok.connect('ws://localhost:21213');
 
 ---
 
-## 10. 未実装 / 今後
+## 11. 未実装 / 今後
 
 - 中継サーバー（tikhub → WebSocket）は別リポジトリ側の作業
 - 効果音

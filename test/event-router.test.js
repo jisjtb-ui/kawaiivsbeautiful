@@ -14,7 +14,8 @@ test('giftId が最優先でポイントに変換される', () => {
 });
 
 test('giftId が無ければギフト名 (大文字小文字を問わない) で引く', () => {
-  const e = router().translate({ type: 'gift', user: { uniqueId: 'taro' }, giftName: 'Finger Heart' });
+  const r = router({ gifts: { byName: { 'finger heart': 5 } } });
+  const e = r.translate({ type: 'gift', user: { uniqueId: 'taro' }, giftName: 'Finger Heart' });
   assert.strictEqual(e.points, 5);
 });
 
@@ -32,7 +33,7 @@ test('ダイヤ数も無ければ既定値を使う', () => {
 
 test('連打ギフトは回数ぶん掛け算される', () => {
   const e = router().translate({
-    type: 'gift', user: { uniqueId: 'taro' }, giftName: 'Rose', repeatCount: 5
+    type: 'gift', user: { uniqueId: 'taro' }, giftId: 5655, diamondCount: 1, repeatCount: 5
   });
   assert.strictEqual(e.points, 5);
 });
@@ -41,7 +42,7 @@ test('ゲームイベントに TikTok 固有の情報が残らない', () => {
   const e = router().translate({
     type: 'gift', user: { uniqueId: 'taro' }, giftId: 5655, giftName: 'Rose', diamondCount: 1
   });
-  assert.deepStrictEqual(Object.keys(e).sort(), ['at', 'points', 'type', 'user']);
+  assert.deepStrictEqual(Object.keys(e).sort(), ['at', 'effect', 'points', 'type', 'user']);
   assert.strictEqual(e.user, 'taro');
 });
 
@@ -74,10 +75,10 @@ test('liveId ごとに別のセッションへ振り分けられる', () => {
   const b = setup();
   a.router.attach('live-2', b.session);
 
-  a.router.dispatch('live-1', { type: 'gift', user: { uniqueId: 'taro' }, giftName: 'Galaxy' });
-  a.router.dispatch('live-2', { type: 'gift', user: { uniqueId: 'hanako' }, giftName: 'Rose' });
+  a.router.dispatch('live-1', { type: 'gift', user: { uniqueId: 'taro' }, giftId: 11046, diamondCount: 1000 });
+  a.router.dispatch('live-2', { type: 'gift', user: { uniqueId: 'hanako' }, giftId: 5655, diamondCount: 1 });
 
-  assert.strictEqual(a.engine.getState().boards.kawaii, 100);
+  assert.strictEqual(a.engine.getState().boards.kawaii, 1000);
   assert.strictEqual(b.engine.getState().boards.kawaii, 1);
 });
 

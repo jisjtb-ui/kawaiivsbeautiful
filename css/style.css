@@ -704,6 +704,8 @@ body.obs-mode .controls { display: none; }
 .notice--kawaii    .notice__effect { color: var(--kawaii-2); }
 .notice--beautiful .notice__effect { color: var(--beautiful-2); }
 .notice--fever     .notice__effect { color: #ffd83d; font-size: 104px; }
+/* チーム色より後に置いて、攻撃は必ず赤で出す (誰が損したかより「damage」が先) */
+.notice--attack    .notice__effect { color: var(--danger); }
 .notice--like      .notice__effect { font-size: 112px; }
 
 /* カウントダウン中はダイヤルを隠さないよう、通知を下へ逃がして少し縮める */
@@ -712,8 +714,9 @@ body.obs-mode .controls { display: none; }
 }
 .stage.counting .notice.is-on { animation: none; }
 
-/* ラウンド勝利などの大きな瞬間は通知より優先する */
-.stage.bannered .notice { opacity: 0; }
+/* ラウンド勝利などの大きな瞬間は通知より優先する。
+   フェードさせるとバナーの裏に通知が透けて見えて汚いので、即座に消す。 */
+.stage.bannered .notice { opacity: 0; transition-duration: 0s; }
 
 /* =========================================================================
    FEVER - 常時表示する 4 つ目の情報

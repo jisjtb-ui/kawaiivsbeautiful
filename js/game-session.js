@@ -68,7 +68,7 @@
     this.likeBuckets = {};   // 貯まっている LIKE の端数
     this.fever = { active: false, endsAt: 0 };
 
-    this.stats = { gifts: 0, likes: 0, milestones: 0, follows: 0, joins: 0 };
+    this.stats = { gifts: 0, attacks: 0, likes: 0, milestones: 0, follows: 0, joins: 0 };
 
     this._bindEngine();
   }
@@ -219,6 +219,8 @@
 
   GameSession.prototype._handleGift = function (event) {
     var team = this.resolveTeam(event.user);
+    if (event.effect === 'attack') return this._handleAttack(event, team);
+
     var boards = Math.floor(event.points * this.config.gifts.boardsPerPoint * this.multiplier());
     if (boards <= 0) return false;
 
@@ -228,6 +230,35 @@
     if (applied <= 0) return false;
 
     this._notice({ kind: 'gift', user: event.user, team: team, effect: '+' + applied });
+    return true;
+  };
+
+  /**
+   * 攻撃ギフト。自分のチームを伸ばすのではなく、相手の板を剥がします。
+   *
+   * カウントダウン中の相手を勝利ラインより下へ落とせば維持を妨害できるので、
+   * 少ない枚数でも効きます。FEVER の倍率は既定では掛かりません
+   * (FEVER は「板の加算」を強化するもの、という切り分け)。
+   */
+  GameSession.prototype._handleAttack = function (event, team) {
+    var cfg = this.config;
+    var multiplier = cfg.fever.multiplyAttack ? this.multiplier() : 1;
+    var boards = Math.floor(event.points * cfg.gifts.attackBoardsPerPoint * multiplier);
+    if (boards <= 0) return false;
+
+    var victim = team === this.teamA ? this.teamB : this.teamA;
+    var before = this.engine.boards[victim];
+    this.engine.attack(team, boards, {
+      source: 'tiktok',
+      liveId: this.liveId,
+      kind: 'attack',
+      user: event.user
+    });
+    var applied = before - this.engine.boards[victim];
+    if (applied <= 0) return false;      // 相手が 0 枚なら何も起きない
+
+    this.stats.attacks += 1;
+    this._notice({ kind: 'attack', user: event.user, team: victim, effect: '-' + applied });
     return true;
   };
 
