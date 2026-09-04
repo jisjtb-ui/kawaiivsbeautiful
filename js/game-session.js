@@ -223,8 +223,11 @@
     if (boards <= 0) return false;
 
     this.stats.gifts += 1;
-    this._addBoards(team, boards, 'gift', event.user);
-    this._notice({ kind: 'gift', user: event.user, team: team, effect: '+' + boards });
+    var applied = this._addBoards(team, boards, 'gift', event.user);
+    // 上限に達していて 1 枚も入らなかったときは「+0」を出さずに黙る
+    if (applied <= 0) return false;
+
+    this._notice({ kind: 'gift', user: event.user, team: team, effect: '+' + applied });
     return true;
   };
 
@@ -245,13 +248,15 @@
     if (boards <= 0) return false;
 
     this.stats.milestones += milestones;
-    this._addBoards(team, boards, 'like', event.user);
+    var applied = this._addBoards(team, boards, 'like', event.user);
+    if (applied <= 0) return false;
+
     this._notice({
       kind: 'like',
       user: event.user,
       team: team,
       detail: (milestones * cfg.perBoard) + ' LIKE',
-      effect: '+' + boards
+      effect: '+' + applied
     });
     return true;
   };
@@ -264,14 +269,23 @@
     return true;
   };
 
+  /**
+   * 板を積み、「実際に積まれた枚数」を返す。
+   *
+   * タワーには上限 (既定では勝利ラインと同じ) があるので、要求した枚数が
+   * そのまま入るとは限りません。通知には必ずこの戻り値を使ってください。
+   * 990 枚のときに 100 ポイントのギフトが来たら、入るのは 10 枚だけです。
+   */
   GameSession.prototype._addBoards = function (team, boards, kind, user) {
-    if (!this.engine) return;
+    if (!this.engine) return 0;
+    var before = this.engine.boards[team];
     this.engine.addBoards(team, boards, {
       source: 'tiktok',
       liveId: this.liveId,
       kind: kind,
       user: user
     });
+    return this.engine.boards[team] - before;
   };
 
   global.KVB = global.KVB || {};

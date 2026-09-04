@@ -22,6 +22,8 @@
 
     // --- ゲームのルール (TikTok を知らない)
     var engine = new KVB.GameEngine({
+      // maxBoards を指定していないので、タワーの上限は targetBoards と同じ 1000 枚。
+      // 超過を貯められると、剥がされてもカウントダウンが解除されなくなるため。
       targetBoards: 1000,
       holdSeconds: 10,
       roundsToWinMatch: 10,

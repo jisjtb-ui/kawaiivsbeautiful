@@ -48,7 +48,11 @@
     roundsToWinMatch: 10,     // rounds needed to win the whole match
     nextRoundDelayMs: 4000,   // pause after a round before the next one starts
     autoStartNextRound: true, // rounds chain automatically
-    maxBoards: 9999           // hard cap, keeps the tower sane
+    // Hard cap on a tower. null means "same as targetBoards", so a tower can
+    // never bank a buffer above the win line: the moment the opponent strips a
+    // board the countdown drops below the target and cancels. Set a number to
+    // allow overshoot on purpose.
+    maxBoards: null
   };
 
   function otherTeam(team) {
@@ -105,6 +109,8 @@
     if (options) {
       Object.keys(options).forEach(function (key) { config[key] = options[key]; });
     }
+
+    if (config.maxBoards == null) config.maxBoards = config.targetBoards;
 
     this.config = config;
     this.now = (options && options.now) || function () { return Date.now(); };

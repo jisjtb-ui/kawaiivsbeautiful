@@ -235,3 +235,52 @@ test('TikTok 由来だと分かる meta を付けて板を積む', () => {
   t.send({ type: 'gift', user: { uniqueId: 'taro' }, giftName: 'Rose' });
   assert.deepStrictEqual(seen[0], { source: 'tiktok', liveId: 'live-1', kind: 'gift', user: 'taro' });
 });
+
+// ------------------------------------------------------------- 板の上限
+
+test('板は勝利ライン (1000) を超えて積み上がらない', () => {
+  const t = setup();
+  for (let i = 0; i < 15; i++) {
+    t.send({ type: 'gift', user: { uniqueId: 'taro' }, giftName: 'Galaxy' });   // 100 point x 15
+  }
+  assert.strictEqual(t.engine.getState().boards.kawaii, 1000);
+});
+
+test('上限をまたぐギフトは、通知も実際に入った枚数になる', () => {
+  const t = setup();
+  t.engine.addBoards('kawaii', 990, { source: 'setup' });
+  t.send({ type: 'chat', user: { uniqueId: 'taro' }, text: 'A' });
+  t.send({ type: 'gift', user: { uniqueId: 'taro' }, giftName: 'Galaxy' });   // 100 point
+
+  assert.strictEqual(t.engine.getState().boards.kawaii, 1000);
+  assert.strictEqual(t.notices.at(-1).effect, '+10', '要求は +100 でも実際に入るのは +10');
+});
+
+test('上限に達していたら通知を出さない (+0 を表示しない)', () => {
+  const t = setup();
+  t.send({ type: 'chat', user: { uniqueId: 'taro' }, text: 'A' });
+  t.engine.addBoards('kawaii', 1000, { source: 'setup' });
+  const before = t.notices.length;
+
+  t.send({ type: 'gift', user: { uniqueId: 'taro' }, giftName: 'Galaxy' });
+  t.send({ type: 'like', user: { uniqueId: 'taro' }, count: 100 });
+  assert.strictEqual(t.notices.length, before);
+});
+
+test('上限があるので、板を 1 枚でも剥がせばカウントダウンが解除される', () => {
+  const t = setup();
+  t.send({ type: 'chat', user: { uniqueId: 'taro' }, text: 'A' });
+
+  // 1000 を大きく超える量のギフトを送っても貯金はできない
+  for (let i = 0; i < 15; i++) t.send({ type: 'gift', user: { uniqueId: 'taro' }, giftName: 'Galaxy' });
+  assert.ok(t.engine.getState().countdown, 'カウントダウン中');
+
+  t.engine.attack('beautiful', 1);
+  assert.strictEqual(t.engine.getState().countdown, null, '1 枚剥がすだけで解除される');
+});
+
+test('maxBoards を明示すれば、これまでどおり超過も許せる', () => {
+  const t = setup({ engine: { maxBoards: 9999 } });
+  for (let i = 0; i < 15; i++) t.send({ type: 'gift', user: { uniqueId: 'taro' }, giftName: 'Galaxy' });
+  assert.strictEqual(t.engine.getState().boards.kawaii, 1500);
+});
