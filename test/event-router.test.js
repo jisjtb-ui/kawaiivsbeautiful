@@ -40,26 +40,52 @@ test('連打ギフトは回数ぶん掛け算される', () => {
 
 test('ゲームイベントに TikTok 固有の情報が残らない', () => {
   const e = router().translate({
-    type: 'gift', user: { uniqueId: 'taro' }, giftId: 5655, giftName: 'Rose', diamondCount: 1
+    type: 'gift',
+    user: { id: '7543090864705487880', uniqueId: 'taro', nickname: 'タロー' },
+    giftId: 5655, giftName: 'Rose', diamondCount: 1
   });
+  // giftId / giftName / diamondCount は消え、ポイントと効果だけが残る
   assert.deepStrictEqual(Object.keys(e).sort(), ['at', 'effect', 'points', 'type', 'user']);
-  assert.strictEqual(e.user, 'taro');
+  assert.deepStrictEqual(e.user, {
+    id: '7543090864705487880', uniqueId: 'taro', displayName: 'タロー'
+  });
+});
+
+test('userId / uniqueId / displayName を保持する', () => {
+  const r = router();
+  const full = r.translate({
+    type: 'chat', user: { id: '123', uniqueId: 'taro', nickname: 'タロー' }, text: 'A'
+  });
+  assert.deepStrictEqual(full.user, { id: '123', uniqueId: 'taro', displayName: 'タロー' });
+
+  // userId が取れないイベントもあるので、その場合は null のまま通す
+  const noId = r.translate({ type: 'chat', user: { uniqueId: 'taro' }, text: 'A' });
+  assert.deepStrictEqual(noId.user, { id: null, uniqueId: 'taro', displayName: 'taro' });
 });
 
 test('like / follow / comment を翻訳する', () => {
   const r = router();
+  const user = (name) => ({ id: null, uniqueId: name, displayName: name });
+
   assert.deepStrictEqual(
     r.translate({ type: 'like', user: { uniqueId: 'a' }, count: 15 }),
-    { type: 'LIKE', user: 'a', count: 15, at: 1000 }
+    { type: 'LIKE', user: user('a'), count: 15, at: 1000 }
   );
   assert.deepStrictEqual(
     r.translate({ type: 'follow', user: { uniqueId: 'b' } }),
-    { type: 'FOLLOW', user: 'b', at: 1000 }
+    { type: 'FOLLOW', user: user('b'), at: 1000 }
   );
   assert.deepStrictEqual(
     r.translate({ type: 'chat', user: { uniqueId: 'c' }, text: 'A' }),
-    { type: 'COMMENT', user: 'c', text: 'A', at: 1000 }
+    { type: 'COMMENT', user: user('c'), text: 'A', at: 1000 }
   );
+});
+
+test('tikhub が送ってくる comment フィールドも読める', () => {
+  const e = router().translate({
+    type: 'chat', user: { id: '1', uniqueId: 'c', nickname: 'C' }, comment: 'B'
+  });
+  assert.strictEqual(e.text, 'B');
 });
 
 test('ゲームで使わないイベントは捨てる', () => {

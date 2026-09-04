@@ -64,8 +64,11 @@
     this.teamA = this.config.teams.a;
     this.teamB = this.config.teams.b;
 
-    this.members = {};       // user -> team (ラウンド中は固定)
-    this.likeBuckets = {};   // 貯まっている LIKE の端数
+    // userId -> { userId, uniqueId, displayName, team }
+    // ラウンド中は固定。GIFT / LIKE / FOLLOW も同じ userId でここを引きます。
+    this.members = {};
+    this.membersByUniqueId = {};   // @名前からも引けるようにした索引
+    this.likeBuckets = {};         // 貯まっている LIKE の端数
     this.fever = { active: false, endsAt: 0 };
 
     this.stats = { gifts: 0, attacks: 0, likes: 0, milestones: 0, follows: 0, joins: 0 };
@@ -87,6 +90,7 @@
   /** ラウンドが変わったら所属・LIKE の貯金・FEVER を白紙に戻す。 */
   GameSession.prototype.resetRound = function () {
     this.members = {};
+    this.membersByUniqueId = {};
     this.likeBuckets = {};
     this._endFever();
     return this;
@@ -94,27 +98,66 @@
 
   // ----------------------------------------------------------- チーム所属
 
-  GameSession.prototype.teamOf = function (user) {
-    return this.members[user] || null;
+  /**
+   * チームを紐付ける鍵。TikTok の userId を使い、取れない場合だけ
+   * uniqueId で代用します (ユーザー名は変更されうるため userId を優先)。
+   */
+  GameSession.prototype.userKey = function (user) {
+    return (user && (user.id || user.uniqueId)) || 'unknown';
   };
 
-  /** 未所属ならランダムに決めて所属させる。所属済みならそのまま返す。 */
+  /** 所属レコード。userId でも @名前でも引けます。 */
+  GameSession.prototype.getMember = function (userOrKey) {
+    if (userOrKey && typeof userOrKey === 'object') return this.members[this.userKey(userOrKey)] || null;
+    return this.members[userOrKey] || this.membersByUniqueId[userOrKey] || null;
+  };
+
+  GameSession.prototype.teamOf = function (userOrKey) {
+    var member = this.getMember(userOrKey);
+    return member ? member.team : null;
+  };
+
+  /** 未所属ならランダムに決めて所属させる。所属済みならそのチームを返す。 */
   GameSession.prototype.resolveTeam = function (user) {
-    var existing = this.members[user];
-    if (existing) return existing;
-    return this.joinTeam(user, this.random() < 0.5 ? this.teamA : this.teamB, 'random');
+    var existing = this.members[this.userKey(user)];
+    if (existing) return existing.team;
+    return this.joinTeam(user, this.random() < 0.5 ? this.teamA : this.teamB, 'random').team;
   };
 
   /**
-   * ユーザーをチームに所属させる。すでに所属していれば何もしません
-   * (ラウンド中のチーム変更は不可)。
+   * ユーザーをチームに所属させる。
+   *
+   * すでに所属していれば何もせず、その所属をそのまま返します
+   * (ラウンド中のチーム変更は不可 / 重複登録もしない)。
+   *
+   * @returns {object} { userId, uniqueId, displayName, team }
    */
   GameSession.prototype.joinTeam = function (user, team, reason) {
-    if (this.members[user]) return this.members[user];
-    this.members[user] = team;
+    var key = this.userKey(user);
+    if (this.members[key]) return this.members[key];
+
+    var member = {
+      userId: user.id || null,
+      uniqueId: user.uniqueId,
+      displayName: user.displayName || user.uniqueId,
+      team: team
+    };
+    this.members[key] = member;
+    this.membersByUniqueId[member.uniqueId] = member;
+
     this.stats.joins += 1;
-    this.emit('team:join', { user: user, team: team, reason: reason || 'comment' });
-    return team;
+    this.emit('team:join', { member: member, team: team, reason: reason || 'comment' });
+    return member;
+  };
+
+  /** チームの表示名。'A TEAM' / 'B TEAM' (config で変更可)。 */
+  GameSession.prototype.teamLabel = function (team) {
+    return team === this.teamA ? this.config.teams.labelA : this.config.teams.labelB;
+  };
+
+  /** 開発ログ用の短い名前。'A' / 'B'。 */
+  GameSession.prototype.teamLetter = function (team) {
+    return team === this.teamA ? 'A' : 'B';
   };
 
   // ------------------------------------------------------------- FEVER
@@ -191,7 +234,7 @@
    * @param {object} event { type:'GIFT'|'LIKE'|'FOLLOW'|'COMMENT', user, ... }
    */
   GameSession.prototype.handle = function (event) {
-    if (!event || !event.user) return false;
+    if (!event || !event.user || !event.user.uniqueId) return false;
     if (this.engine && !this.engine.isLive()) return false;
 
     switch (event.type) {
@@ -207,13 +250,34 @@
     var text = normalizeComment(event.text);
     var cfg = this.config.comment;
 
-    var team = null;
-    if (cfg.a.indexOf(text) !== -1) team = this.teamA;
-    else if (cfg.b.indexOf(text) !== -1) team = this.teamB;
-    if (!team) return false;               // 普通のコメントは無視
+    var requested = null;
+    if (cfg.a.indexOf(text) !== -1) requested = this.teamA;
+    else if (cfg.b.indexOf(text) !== -1) requested = this.teamB;
+    if (!requested) return false;          // 「こんにちは」などの普通のコメントは無視
 
+    var before = this.getMember(event.user);
     // すでに所属していれば変更されない (joinTeam が握りつぶす)
-    this.joinTeam(event.user, team, 'comment');
+    var member = this.joinTeam(event.user, requested, 'comment');
+    var joined = !before;
+
+    // 開発ログ用。画面には出さず、購読側 (main.js) がコンソールへ出す。
+    this.emit('team:select', {
+      member: member,
+      text: String(event.text).trim(),
+      requested: requested,
+      joined: joined
+    });
+
+    // 通知を出すのは「新しく振り分けられた」ときだけ。
+    // 所属済みの人が再度コメントしても何も変わらないので画面には出さない。
+    if (joined) {
+      this._notice({
+        kind: 'team',
+        user: member.uniqueId,
+        team: member.team,
+        effect: this.teamLabel(member.team)
+      });
+    }
     return true;
   };
 
@@ -229,7 +293,7 @@
     // 上限に達していて 1 枚も入らなかったときは「+0」を出さずに黙る
     if (applied <= 0) return false;
 
-    this._notice({ kind: 'gift', user: event.user, team: team, effect: '+' + applied });
+    this._notice({ kind: 'gift', user: event.user.uniqueId, team: team, effect: '+' + applied });
     return true;
   };
 
@@ -252,20 +316,20 @@
       source: 'tiktok',
       liveId: this.liveId,
       kind: 'attack',
-      user: event.user
+      user: event.user.uniqueId
     });
     var applied = before - this.engine.boards[victim];
     if (applied <= 0) return false;      // 相手が 0 枚なら何も起きない
 
     this.stats.attacks += 1;
-    this._notice({ kind: 'attack', user: event.user, team: victim, effect: '-' + applied });
+    this._notice({ kind: 'attack', user: event.user.uniqueId, team: victim, effect: '-' + applied });
     return true;
   };
 
   GameSession.prototype._handleLike = function (event) {
     var cfg = this.config.likes;
     var team = this.resolveTeam(event.user);
-    var key = cfg.scope === 'team' ? ('team:' + team) : ('user:' + event.user);
+    var key = cfg.scope === 'team' ? ('team:' + team) : ('user:' + this.userKey(event.user));
 
     this.stats.likes += event.count;
     var total = (this.likeBuckets[key] || 0) + event.count;
@@ -284,7 +348,7 @@
 
     this._notice({
       kind: 'like',
-      user: event.user,
+      user: event.user.uniqueId,
       team: team,
       detail: (milestones * cfg.perBoard) + ' LIKE',
       effect: '+' + applied
@@ -295,8 +359,8 @@
   GameSession.prototype._handleFollow = function (event) {
     this.stats.follows += 1;
     // FOLLOW はチームを有利にせず、A/B 共通の FEVER を動かす。
-    if (this.fever.active) this._extendFever(event.user);
-    else this._startFever(event.user);
+    if (this.fever.active) this._extendFever(event.user.uniqueId);
+    else this._startFever(event.user.uniqueId);
     return true;
   };
 
@@ -314,7 +378,7 @@
       source: 'tiktok',
       liveId: this.liveId,
       kind: kind,
-      user: user
+      user: user && user.uniqueId ? user.uniqueId : user
     });
     return this.engine.boards[team] - before;
   };

@@ -27,7 +27,7 @@ python3 -m http.server 8000
 ルールのテスト:
 
 ```
-npm test        # 59 件。ブラウザ不要
+npm test        # 81 件。ブラウザ不要
 npm run gifts   # TikTok のギフト一覧を取得（後述）
 ```
 
@@ -37,8 +37,8 @@ npm run gifts   # TikTok のギフト一覧を取得（後述）
 
 | 操作 | 起きること |
 | --- | --- |
-| コメントに **`A`** | KAWAII に参加 |
-| コメントに **`B`** | BEAUTIFUL に参加 |
+| コメントに **`A`** | KAWAII (A TEAM) に参加。画面に `@username → A TEAM` が出る |
+| コメントに **`B`** | BEAUTIFUL (B TEAM) に参加。画面に `@username → B TEAM` が出る |
 | **ギフト** | 自分のチームの板が増える（ギフトの価値ぶん） |
 | **Banana Peel**（攻撃ギフト） | **相手チームの板を 10 枚剥がす** |
 | **いいね 100 回** | 自分のチームの板が 1 枚増える |
@@ -46,8 +46,12 @@ npm run gifts   # TikTok のギフト一覧を取得（後述）
 
 補足:
 
+- 判定は **`A` / `B` の完全一致**です（小文字・全角Ａ／Ｂ・前後の空白は許容）。
+  `Aでいく` `Bチーム` `私はA` のような文章は対象外です（MVP）。
+  `こんにちは` `かわいい` などの通常コメントは無視します。
 - 一度チームに入ると、**そのラウンド中は変更できません**。
-  `A` のあとに `B` とコメントしても移動しません。
+  `A` のあとに `B` とコメントしても移動しません。重複登録もしません。
+- 所属は **TikTok の userId** に紐付きます。ユーザー名を変えても所属は変わりません。
 - まだどちらにも入っていない人がギフト・いいねをした場合は、
   **A/B をランダムに決めて**その効果を適用し、そのままそのチームに所属させます。
 - いいねは**累積**します。`87 → +20 → 107` で 1 枚積み、余った `7` は次に繰り越します。
@@ -108,9 +112,9 @@ npm run gifts   # TikTok のギフト一覧を取得（後述）
 イベントが起きたときだけ、中央に**一時通知が 1 件**出て、すぐ消えます。
 
 ```
-   @Taro              @Hanako              @Ken
-    +25              FEVER +15s          100 LIKE
-                                             +1
+   @Taro         @Hanako          @Ken          @Yuki
+    +25         FEVER +15s      100 LIKE      → A TEAM
+                                    +1
 ```
 
 - 通知は常に 1 件だけです。積み上がりません。
@@ -118,8 +122,12 @@ npm run gifts   # TikTok のギフト一覧を取得（後述）
 - ただしイベントが多い配信で点滅して読めなくならないよう、
   **最低表示時間（既定 0.7 秒）** は守ります。
 - 優先度が高い通知（FEVER > GIFT > LIKE）は、それを待たずに割り込みます。
-- 通知の色でどちらのチームに入ったかが分かります（KAWAII=ピンク / BEAUTIFUL=水色 / FEVER=黄）。
-  文字数を増やさずに「どっちに影響したか」を伝えるためです。
+- 通知の色でどちらのチームに入ったかが分かります（KAWAII=ピンク / BEAUTIFUL=水色 /
+  FEVER=黄 / 攻撃=赤）。文字数を増やさずに「どっちに影響したか」を伝えるためです。
+- チーム振り分けの通知は**新しく振り分けられたときだけ**出ます。
+  所属済みの人が再度コメントしても所属は変わらないので、画面も変わりません。
+- 画面には **`@ユーザー名` と所属先しか出しません。** userId・表示名・コメント本文などの
+  内部情報は出しません。ユーザー一覧やコメントログも表示しません。
 
 ラウンド勝利や 1000 枚到達のカウントダウンなど、試合の節目の演出は従来どおりです。
 
@@ -132,6 +140,7 @@ npm run gifts   # TikTok のギフト一覧を取得（後述）
 | 設定 | 既定値 | 意味 |
 | --- | --- | --- |
 | `teams.a` / `teams.b` | `kawaii` / `beautiful` | コメントの A / B がどちらのチームか |
+| `teams.labelA` / `labelB` | `A TEAM` / `B TEAM` | 振り分け通知の表示名 |
 | `comment.a` / `comment.b` | `['a','ａ']` / `['b','ｂ']` | チーム参加とみなすコメント（完全一致） |
 | `likes.perBoard` | `100` | 何 LIKE で 1 区切りか |
 | `likes.boardsPerMilestone` | `1` | 区切り 1 回で積む枚数 |
@@ -181,7 +190,25 @@ JP の 689 種すべてが自動的に正しい価値になります。`byId` �
 
 ---
 
-## 5. 設計
+## 5. 開発用の確認表示
+
+チーム振り分けはブラウザのコンソールにも出ます。**ゲーム画面には出しません。**
+
+```
+[COMMENT] @Taro: A
+[TEAM] @Taro → A
+[COMMENT] @Taro: B
+[TEAM] @Taro → ALREADY A      ← 所属済みなので変わらない
+[COMMENT] @Hanako: B
+[TEAM] @Hanako → B
+```
+
+`A` / `B` 以外のコメントでは何も出ません（ログが埋もれないように）。
+配信を受けている側（tikhub のターミナル）には、これまでどおり受信したイベントが出ます。
+
+---
+
+## 6. 設計
 
 TikTok の処理とゲームのルールは**直接つながっていません**。
 
@@ -221,26 +248,26 @@ router.dispatch('live-b', eventFromLiveB);   // → Game B だけが動く
 
 ---
 
-## 6. ファイル構成
+## 7. ファイル構成
 
 ```
 index.html                # 1920x1080 のステージ + テストパネル
 css/style.css             # 見た目・アニメーション
 js/config.js              # ★設定値はすべてここ
 js/game.js                # ゲームロジック（DOM も TikTok も知らない）
-js/game-session.js        # ★ルール層：チーム / LIKE 累積 / FEVER
+js/game-session.js        # ★ルール層：チーム所属 / LIKE 累積 / FEVER
 js/event-router.js        # ★TikTok イベント → ゲームイベント + LIVE ごとの振り分け
 js/tiktok-adapter.js      # TikTok の受信口
 js/renderer.js            # 画面描画（engine とセッションの通知を読むだけ）
 js/controls.js            # テスト入力（TikTok イベントの再現 + 板の直接操作）
-js/main.js                # 起動と 1 本のループ
+js/main.js                # 起動と 1 本のループ + 開発用コンソールログ
 tools/fetch-gifts.js      # ギフトカタログの取得（giftId / 名前 / ダイヤ数）
 test/                     # ルールのテスト（node --test）
 ```
 
 ---
 
-## 7. テスト用操作
+## 8. テスト用操作
 
 画面下のパネル（`H` キーで開閉、`?obs=1` で非表示）から、
 **実際の TikTok イベントとまったく同じ経路**で動作確認できます。
@@ -272,7 +299,7 @@ KVB.engine.getState();
 
 ---
 
-## 8. ギフト一覧を調べる
+## 9. ギフト一覧を調べる
 
 TikTok のギフトは増減するので、設定を見直すときは実物を取得してください。
 Euler Stream の公開エンドポイントを使うので **API キーは不要**です。
@@ -302,7 +329,7 @@ JP のギフト: 689 種
 
 ---
 
-## 9. OBS ブラウザソース設定
+## 10. OBS ブラウザソース設定
 
 1. ソース → **ブラウザ** を追加
 2. **ローカルファイル** にチェック → `index.html` を選択
@@ -315,36 +342,50 @@ JP のギフト: 689 種
 
 ---
 
-## 10. TikTok LIVE につなぐ
+## 11. TikTok LIVE につなぐ
 
 ブラウザから TikTok へ直接つなぐことはできません。
-別プロセスでイベントを受信し、WebSocket でブラウザへ中継します。
+別プロセスでイベントを受信し、ブラウザへ中継します。
 
 受信側は別リポジトリ [`jisjtb-ui/tikhub`](https://github.com/jisjtb-ui/tikhub) の
-TikTok LIVE Event Server がそのまま使えます（GIFT / LIKE / FOLLOW / COMMENT を
-実配信で受信できることを確認済みです）。中継サーバーがイベントを
-次の形の JSON で 1 件ずつ送れば、ブラウザ側は次の 1 行で繋がります。
+TikTok LIVE Event Server を使います。
+
+**1. 受信側を起動する**（tikhub のディレクトリで）
+
+```bash
+npm start -- <LIVE の URL> --serve
+#  → 接続しました (roomId: ...)
+#  → ゲーム画面への中継を開始しました: http://127.0.0.1:8787/events
+```
+
+**2. ゲーム画面をつなぐ**（ブラウザのコンソールで）
 
 ```js
-KVB.tiktok.connect('ws://localhost:21213');
+KVB.tiktok.connect('http://127.0.0.1:8787/events');
+//  → [KVB] TikTok イベントの受信を開始しました
 ```
 
-送る JSON:
+これで視聴者が `A` / `B` とコメントすると、ゲーム画面に `@username → A TEAM` が出ます。
+
+- 中継は **SSE** です。切断されるとブラウザが自動で再接続します。
+- `ws://` の URL を渡せば WebSocket でも繋げます。
+- **`connect()` を呼ばなければネットワークアクセスは一切発生せず**、
+  これまでどおり完全オフラインで動きます。
+
+受け付けるイベントの形:
 
 ```json
-{ "type": "gift",   "user": { "uniqueId": "taro" }, "giftId": 5655, "giftName": "Rose",
-  "repeatCount": 5, "diamondCount": 1 }
-{ "type": "like",   "user": { "uniqueId": "taro" }, "count": 15 }
-{ "type": "follow", "user": { "uniqueId": "taro" } }
-{ "type": "chat",   "user": { "uniqueId": "taro" }, "text": "A" }
+{ "type": "chat",   "user": { "id": "7543...", "uniqueId": "taro", "nickname": "タロー" }, "comment": "A" }
+{ "type": "gift",   "user": { "id": "7543...", "uniqueId": "taro" }, "giftId": 5655, "diamondCount": 1, "repeatCount": 5 }
+{ "type": "like",   "user": { "id": "7543...", "uniqueId": "taro" }, "count": 15 }
+{ "type": "follow", "user": { "id": "7543...", "uniqueId": "taro" } }
 ```
 
-`connect()` を呼ばなければネットワークアクセスは一切発生せず、
-これまでどおり完全オフラインで動きます。
+`user.id`（TikTok の userId）が所属の鍵です。取れない場合は `uniqueId` で代用します。
 
 ---
 
-## 11. 未実装 / 今後
+## 12. 未実装 / 今後
 
 - 中継サーバー（tikhub → WebSocket）は別リポジトリ側の作業
 - 効果音

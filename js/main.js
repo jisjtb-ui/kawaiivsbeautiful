@@ -47,6 +47,18 @@
     // Renderer はセッションの中身を知らず、通知を受け取って描くだけ。
     session.on('notice', function (notice) { renderer.showNotice(notice); });
 
+    // 開発確認用のログ。ブラウザのコンソールにだけ出し、ゲーム画面には出さない。
+    //
+    //   [COMMENT] @Taro: A
+    //   [TEAM] @Taro → A
+    //   [TEAM] @Taro → ALREADY A      (すでに所属済みでチームが変わらなかった)
+    session.on('team:select', function (data) {
+      var name = '@' + data.member.uniqueId;
+      var letter = session.teamLetter(data.member.team);
+      console.log('[COMMENT] ' + name + ': ' + data.text);
+      console.log('[TEAM] ' + name + ' \u2192 ' + (data.joined ? letter : 'ALREADY ' + letter));
+    });
+
     // コンソール / OBS スクリプト / 将来の TikTok 接続から触れるように公開する
     global.KVB.engine = engine;
     global.KVB.session = session;

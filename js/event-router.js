@@ -32,12 +32,26 @@
 
   /**
    * TikTok 側のユーザー表現はライブラリやバージョンで揺れるので、
-   * @ 抜きのユーザー名 1 個へ均す。
+   * ゲームが使う 3 つだけに均す。
+   *
+   *   id          … TikTok の userId。チームの紐付けはこれを鍵にする
+   *   uniqueId    … @ 抜きのユーザー名。画面に出すのはこれだけ
+   *   displayName … 表示名 (ニックネーム)。画面には出さないが保持する
+   *
+   * userId が取れない配信・イベントもあるので、その場合は uniqueId で代用します。
    */
   function readUser(raw) {
     var user = raw.user || raw;
-    var name = user.uniqueId || user.displayId || user.username || user.nickname || raw.username;
-    return name ? String(name) : 'unknown';
+    var id = user.id != null && user.id !== '' ? String(user.id) : null;
+    var uniqueId = user.uniqueId || user.displayId || user.username || raw.username || null;
+    var displayName = user.nickname || user.displayName || null;
+
+    uniqueId = uniqueId ? String(uniqueId) : (id || 'unknown');
+    return {
+      id: id,
+      uniqueId: uniqueId,
+      displayName: displayName ? String(displayName) : uniqueId
+    };
   }
 
   function readText(raw) {

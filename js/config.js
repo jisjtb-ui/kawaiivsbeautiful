@@ -18,7 +18,15 @@
      */
     teams: {
       a: 'kawaii',
-      b: 'beautiful'
+      b: 'beautiful',
+
+      /**
+       * チーム振り分けの通知に出す表示名。
+       * 視聴者が打つ「A」「B」とそのまま対応させています。
+       * タワーの見出しに合わせたければ 'KAWAII' / 'BEAUTIFUL' に変えてください。
+       */
+      labelA: 'A TEAM',
+      labelB: 'B TEAM'
     },
 
     /**
@@ -150,6 +158,7 @@
         attack: 3,
         fever: 3,
         gift: 2,
+        team: 2,
         like: 1
       }
     },

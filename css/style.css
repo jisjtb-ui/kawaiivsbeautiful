@@ -706,13 +706,28 @@ body.obs-mode .controls { display: none; }
 .notice--fever     .notice__effect { color: #ffd83d; font-size: 104px; }
 /* チーム色より後に置いて、攻撃は必ず赤で出す (誰が損したかより「damage」が先) */
 .notice--attack    .notice__effect { color: var(--danger); }
+
+/* チーム振り分け。「@誰が」「どちらへ」だけを一瞬で読ませたいので、
+   矢印を添えて所属先をチーム色で大きく出す。 */
+.notice--team .notice__effect { font-size: 96px; letter-spacing: 6px; }
+.notice--team .notice__effect::before {
+  content: "\2192";          /* → */
+  margin-right: 24px;
+  opacity: 0.55;
+}
+.notice--team.notice--kawaii    .notice__effect { color: var(--kawaii-2); }
+.notice--team.notice--beautiful .notice__effect { color: var(--beautiful-2); }
 .notice--like      .notice__effect { font-size: 112px; }
 
-/* カウントダウン中はダイヤルを隠さないよう、通知を下へ逃がして少し縮める */
+/* カウントダウン中は、ダイヤルの下に FEVER 表示があって余白が無い。
+   通知はダイヤルの上へ逃がし、そのぶん「KAWAII HOLDING」の見出しを引っ込める
+   (誰がどちらを保持しているかはダイヤルの色とタワーで分かる)。 */
 .stage.counting .notice {
-  transform: translateY(320px) scale(0.62);
+  transform: translateY(-300px) scale(0.62);
 }
 .stage.counting .notice.is-on { animation: none; }
+.stage.counting.noticed .countdown__label { opacity: 0; }
+.countdown__label { transition: opacity 0.12s ease; }
 
 /* ラウンド勝利などの大きな瞬間は通知より優先する。
    フェードさせるとバナーの裏に通知が透けて見えて汚いので、即座に消す。 */
