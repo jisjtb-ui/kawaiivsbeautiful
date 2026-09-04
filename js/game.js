@@ -285,12 +285,27 @@
       // cancelled the moment its own tower falls under the target.
       if (this.boards[this.countdown.team] < target) {
         var cancelled = this.countdown;
+
+        // The opponent may have been sitting on the target the whole time.
+        // Knocking the holder down does not stop the round: whoever is still
+        // holding the line picks the countdown up. They start a fresh hold of
+        // their own rather than inheriting the seconds the other team earned.
+        //
+        // Who takes over is resolved before the cancel is announced, so a
+        // listener can tell "the hold collapsed" from "the hold changed hands"
+        // and show the right thing.
+        var challenger = otherTeam(cancelled.team);
+        var takenBy = this.boards[challenger] >= target ? challenger : null;
+
         this.countdown = null;
         this.phase = PHASE.PLAYING;
         this.emit('countdown:cancel', {
           team: cancelled.team,
-          boards: this.boards[cancelled.team]
+          boards: this.boards[cancelled.team],
+          takenBy: takenBy
         });
+
+        if (takenBy) this._startCountdown(takenBy, cancelled.team);
       }
       return;
     }
@@ -313,7 +328,12 @@
     this._startCountdown(leader);
   };
 
-  GameEngine.prototype._startCountdown = function (team) {
+  /**
+   * @param {string} team
+   * @param {string} [takenFrom] set when this countdown was handed over
+   *        because the previous holder was knocked below the target.
+   */
+  GameEngine.prototype._startCountdown = function (team, takenFrom) {
     var durationMs = this.config.holdSeconds * 1000;
     this.countdown = {
       team: team,
@@ -324,7 +344,8 @@
     this.emit('countdown:start', {
       team: team,
       seconds: this.config.holdSeconds,
-      boards: this.boards[team]
+      boards: this.boards[team],
+      takenFrom: takenFrom || null
     });
   };
 

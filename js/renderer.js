@@ -138,13 +138,27 @@
       self.el.countdown.classList.add('team-' + data.team);
       self.el.countdownLabel.textContent = TEAM_LABEL[data.team] + ' HOLDING';
       self._lastSecond = null;
-      self.showBanner(TEAM_LABEL[data.team] + ' ' + engine.config.targetBoards + '!',
-        'HOLD ' + engine.config.holdSeconds + ' SECONDS',
-        { variant: data.team, duration: 1200, priority: 2 });
+
+      if (data.takenFrom) {
+        // 受け渡し。直前に出た「COUNTDOWN CANCELLED」より強い優先度で上書きし、
+        // 「止まった」ではなく「相手に移った」と読めるようにする。
+        self.showBanner(TEAM_LABEL[data.team] + ' TAKES OVER',
+          'HOLD ' + engine.config.holdSeconds + ' SECONDS',
+          { variant: data.team, duration: 1600, priority: 4 });
+        self.fireFlash(false);
+      } else {
+        self.showBanner(TEAM_LABEL[data.team] + ' ' + engine.config.targetBoards + '!',
+          'HOLD ' + engine.config.holdSeconds + ' SECONDS',
+          { variant: data.team, duration: 1200, priority: 2 });
+      }
     });
 
     engine.on('countdown:cancel', function (data) {
       self.hideCountdown();
+      // 相手へ受け渡される場合は「解除」ではないので、赤いフラッシュも
+      // CANCELLED の表示も出さない。続く countdown:start 側で見せる。
+      if (data.takenBy) return;
+
       self.showBanner('COUNTDOWN CANCELLED', TEAM_LABEL[data.team] + ' ' + data.boards,
         { variant: 'danger', duration: 1500, priority: 3 });
       self.fireFlash(true);
