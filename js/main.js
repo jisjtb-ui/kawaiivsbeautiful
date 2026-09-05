@@ -134,11 +134,31 @@
     bindVolume('bgm-volume', 'stream');
     bindVolume('bgm-monitor-volume', 'monitor');
 
+    // 「自分でも聞く」を入れるまで、その下の 2 つは触っても意味がない。
+    // 押せない見た目にしておくと、どこから設定するのか迷わない。
     var monitorOn = document.getElementById('bgm-monitor-on');
+    var monitorRows = ['bgm-monitor-volume', 'bgm-sink-monitor'];
     if (monitorOn) {
       monitorOn.addEventListener('change', function () {
         audio.setOutput('monitor', { enabled: monitorOn.checked });
+        monitorRows.forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.disabled = !monitorOn.checked;
+        });
       });
+    }
+
+    // 出力先の切り替えは Chrome 系だけの機能。使えないブラウザで黙って
+    // 効かないより、その場に書いてあるほうが親切。
+    if (typeof global.HTMLMediaElement === 'undefined'
+        || typeof global.HTMLMediaElement.prototype.setSinkId !== 'function') {
+      Array.prototype.forEach.call(document.querySelectorAll('.bgm__row--sink'), function (row) {
+        row.hidden = true;
+      });
+      var sinkNote = document.getElementById('bgm-devices');
+      if (sinkNote) sinkNote.hidden = true;
+      var sinkHint = document.getElementById('bgm-hint');
+      if (sinkHint) sinkHint.textContent = 'このブラウザは出力先を切り替えられません。Chrome か Edge をお使いください。';
     }
 
     ['stream', 'monitor'].forEach(function (which) {
@@ -172,7 +192,7 @@
                 sel.appendChild(o);
               });
             });
-            if (hint) hint.textContent = outs.length + ' 個の出力先が見つかりました';
+            if (hint) hint.textContent = outs.length + ' 個の出力先が見つかりました。1 と 2 で別のものを選ぶと音を分けられます。';
           })
           .catch(function (err) {
             if (hint) hint.textContent = '出力先を取得できませんでした: ' + err.message;

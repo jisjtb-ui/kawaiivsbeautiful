@@ -906,10 +906,25 @@ body.obs-mode .controls { display: none; }
   letter-spacing: 1px;
   color: rgba(255, 255, 255, 0.75);
 }
+/* チェックボックスの行だけは文字が主役なので、幅を固定すると切れる。 */
+.bgm__row--check .bgm__name { width: auto; }
 .bgm__name { width: 96px; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bgm__row input[type="file"] { min-width: 0; flex: 1; font-size: 13px; color: inherit; }
 .bgm__row input[type="range"] { flex: 1; }
 .bgm__hint { margin: 2px 0 0; font-size: 12px; line-height: 1.6; opacity: 0.55; }
+.bgm__lead { margin: 0 0 4px; font-size: 12px; line-height: 1.6; opacity: 0.75; }
+.bgm__lead b { color: #ffd83d; }
+.bgm__sub {
+  margin: 10px 0 2px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  opacity: 0.8;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 8px;
+}
+.bgm__sub small { opacity: 0.6; font-weight: normal; }
+/* 使えない設定は薄く。押しても効かないものを押させない。 */
+.bgm__row input:disabled, .bgm__row select:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* 自動再生がブロックされているときの案内 ------------------------------- */
 

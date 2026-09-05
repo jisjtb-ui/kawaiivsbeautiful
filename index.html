@@ -194,6 +194,9 @@
 
     <div class="controls__group controls__group--bgm">
       <h3>BGM <small>(リード中のチームの曲)</small></h3>
+      <p class="bgm__lead">曲を 2 つ選ぶだけで配信の音に乗ります。<br>
+        <b>出力先は、ふつうは触らなくて大丈夫です。</b></p>
+
       <label class="bgm__row">
         <span class="bgm__name" id="bgm-name-a">TEAM A</span>
         <input type="file" accept="audio/*" id="bgm-file-a">
@@ -202,31 +205,34 @@
         <span class="bgm__name" id="bgm-name-b">TEAM B</span>
         <input type="file" accept="audio/*" id="bgm-file-b">
       </label>
+
+      <h4 class="bgm__sub">1. 配信に流す音</h4>
       <label class="bgm__row">
-        <span class="bgm__name">配信の音量</span>
+        <span class="bgm__name">音量</span>
         <input type="range" id="bgm-volume" min="0" max="100" value="60">
       </label>
-      <label class="bgm__row">
-        <span class="bgm__name">配信の出力先</span>
+      <label class="bgm__row bgm__row--sink">
+        <span class="bgm__name">出力先</span>
         <select id="bgm-sink-stream"><option value="">既定のデバイス</option></select>
       </label>
 
-      <label class="bgm__row">
+      <h4 class="bgm__sub">2. 自分だけで聞く音 <small>(任意)</small></h4>
+      <label class="bgm__row bgm__row--check">
         <span class="bgm__name"><input type="checkbox" id="bgm-monitor-on"> 自分でも聞く</span>
       </label>
       <label class="bgm__row">
-        <span class="bgm__name">自分の音量</span>
-        <input type="range" id="bgm-monitor-volume" min="0" max="100" value="40">
+        <span class="bgm__name">音量</span>
+        <input type="range" id="bgm-monitor-volume" min="0" max="100" value="40" disabled>
       </label>
-      <label class="bgm__row">
-        <span class="bgm__name">自分の出力先</span>
-        <select id="bgm-sink-monitor"><option value="">既定のデバイス</option></select>
+      <label class="bgm__row bgm__row--sink">
+        <span class="bgm__name">出力先</span>
+        <select id="bgm-sink-monitor" disabled><option value="">既定のデバイス</option></select>
       </label>
 
-      <button type="button" class="btn btn--ghost" id="bgm-devices">出力先の一覧を読み込む</button>
+      <button type="button" class="btn btn--ghost" id="bgm-devices">出力先を調べる</button>
       <button type="button" class="btn btn--ghost" id="bgm-stop">BGM 停止</button>
-      <p class="bgm__hint" id="bgm-hint">配信で使うなら js/config.js の theme.teamA.bgm にパスを書くと、毎回選ばずに済みます。<br>出力先を分けると、配信に乗る音と自分が聞く音を別デバイスにできます。</p>
-    </div>
+      <p class="bgm__hint" id="bgm-hint">出力先を 1 と 2 で分けるには、パソコンに仮想オーディオ機器が要ります。<br>
+        入れていない場合は「既定のデバイス」のままにしてください。</p>
 
     <div class="controls__group controls__group--system">
       <h3>SYSTEM</h3>
