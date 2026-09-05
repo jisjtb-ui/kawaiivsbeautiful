@@ -52,6 +52,11 @@
       noticeDetail: $('notice-detail'),
       noticeEffect: $('notice-effect'),
       link: $('link'),
+      setup: $('setup'),
+      setupForm: $('setup-form'),
+      setupInput: $('setup-input'),
+      setupGo: $('setup-go'),
+      setupHint: $('setup-hint'),
       fever: $('fever'),
       feverMult: $('fever-mult'),
       feverTime: $('fever-time')
@@ -406,6 +411,29 @@
     var connected = status === 'connected';
     this.el.link.hidden = connected;
     if (!connected) this.el.link.textContent = detail || 'TIKTOK 未接続';
+  };
+
+  /**
+   * LIVE の URL 貼り付け欄。配信に繋がっていないときだけ出します。
+   *
+   * @param {boolean} show
+   * @param {string} [hint] 下に出す説明 / エラー
+   * @param {boolean} [isError]
+   */
+  Renderer.prototype.setSetup = function (show, hint, isError) {
+    if (!this.el.setup) return;
+    this.el.setup.hidden = !show;
+    if (hint !== undefined && this.el.setupHint) {
+      this.el.setupHint.textContent = hint;
+      this.el.setupHint.classList.toggle('is-error', Boolean(isError));
+    }
+    if (show && this.el.setupInput) this.el.setupInput.focus();
+  };
+
+  Renderer.prototype.setSetupBusy = function (busy) {
+    if (!this.el.setupGo) return;
+    this.el.setupGo.disabled = busy;
+    this.el.setupGo.textContent = busy ? '接続中…' : '接続';
   };
 
   // ---------------------------------------------------------------- fever

@@ -96,14 +96,62 @@
     //
     // ?offline=1 を付けると接続しません (完全オフラインで動かしたいとき)。
     var params = new URLSearchParams(global.location.search);
-    tiktok.onStatus(function (status) { renderer.setLink(status); });
+    var offline = params.get('offline') === '1' || params.has('offline');
 
-    if (params.get('offline') === '1' || params.has('offline')) {
-      renderer.setLink('connected');          // 出さない
+    /**
+     * 画面の出し分け。見るのは 2 段階です。
+     *
+     *   中継サーバーに繋がっているか  … 繋がっていなければ右上に「TIKTOK 未接続」
+     *   配信に繋がっているか          … 繋がっていなければ URL の貼り付け欄
+     */
+    function refresh() {
+      if (offline) { renderer.setLink('connected'); renderer.setSetup(false); return; }
+
+      var linked = tiktok.connected;
+      renderer.setLink(linked ? 'connected' : 'disconnected');
+
+      var live = tiktok.live || {};
+      var needsTarget = linked && tiktok.control && live.status !== 'connected';
+      renderer.setSetup(needsTarget, live.status === 'error' || live.status === 'ended'
+        ? live.message
+        : '短縮 URL (vt.tiktok.com/...) や @ユーザー名 でも繋がります',
+      live.status === 'error');
+    }
+
+    tiktok.onStatus(refresh);
+
+    if (offline) {
+      refresh();
       console.info('[KVB] オフラインモードです (TikTok へ接続しません)');
     } else {
-      renderer.setLink('disconnected');
-      void tiktok.connect();
+      refresh();
+      void tiktok.connect().then(refresh);
+    }
+
+    // 貼り付けられた URL を中継サーバーへ渡す。ゲームは TikTok を直接触らない。
+    var form = document.getElementById('setup-form');
+    var input = document.getElementById('setup-input');
+    if (form && input) {
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var target = input.value.trim();
+        if (!target) return;
+
+        renderer.setSetupBusy(true);
+        renderer.setSetup(true, '接続しています…', false);
+        tiktok.connectLive(target).then(function (result) {
+          renderer.setSetupBusy(false);
+          if (result && result.ok) {
+            input.value = '';
+            renderer.setSetup(false);
+          } else {
+            var why = (result && result.message)
+              || (result && result.live && result.live.message)
+              || '接続できませんでした';
+            renderer.setSetup(true, why, true);
+          }
+        });
+      });
     }
   });
 })(window);

@@ -819,3 +819,71 @@ body.obs-mode .controls { display: none; }
   0%, 100% { opacity: 0.55; }
   50%      { opacity: 1; }
 }
+
+
+/* =========================================================================
+   SETUP - 配信に繋がっていないときの URL 貼り付け欄
+   繋がれば消えるので、配信中の画面には出ない。
+   ========================================================================= */
+
+.setup {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 2, 8, 0.86);
+}
+
+.setup__box {
+  width: 1180px;
+  max-width: 88%;
+  text-align: center;
+}
+
+.setup__title {
+  font-size: 54px;
+  letter-spacing: 4px;
+  margin-bottom: 34px;
+  color: #fff;
+}
+
+.setup__form { display: flex; gap: 18px; }
+
+.setup__input {
+  flex: 1;
+  font-family: inherit;
+  font-size: 34px;
+  letter-spacing: 1px;
+  padding: 24px 28px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  min-width: 0;
+}
+.setup__input:focus { outline: none; border-color: #ffd83d; }
+.setup__input::placeholder { color: rgba(255, 255, 255, 0.35); }
+
+.setup__go {
+  font-family: inherit;
+  font-size: 34px;
+  letter-spacing: 6px;
+  padding: 24px 52px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffd83d, #b58a00);
+  color: #201500;
+  cursor: pointer;
+}
+.setup__go:disabled { opacity: 0.5; cursor: default; }
+
+.setup__hint {
+  margin-top: 26px;
+  font-size: 26px;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.55);
+  min-height: 32px;
+}
+.setup__hint.is-error { color: #ff7a7a; }

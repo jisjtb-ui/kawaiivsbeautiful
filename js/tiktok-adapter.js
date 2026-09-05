@@ -25,6 +25,10 @@
     this.connected = false;
     this.warned = false;
     this.url = null;
+    /** 中継サーバーが接続先の変更を受け付けるか。 */
+    this.control = false;
+    /** 配信側の状態。{ status, target, username, roomId, message } */
+    this.live = null;
     this._statusHandlers = [];
   }
 
@@ -136,6 +140,22 @@
         self.handleEvent(payload);
       };
 
+      // 配信そのものの状態 (未接続 / 接続中 / 配信終了) を受け取る。
+      // これで「中継には繋がったが配信には繋がっていない」を見分けられる。
+      ['ready', 'status'].forEach(function (name) {
+        source.addEventListener(name, function (event) {
+          var payload;
+          try {
+            payload = JSON.parse(event.data || '{}');
+          } catch (err) {
+            return;
+          }
+          self.control = payload.control !== undefined ? payload.control : self.control;
+          self.live = payload.live || payload;
+          self.emitStatus('connected');
+        });
+      });
+
       source.onerror = function () {
         // EventSource は自動で再接続を続けるので、ここでは状態を落とすだけ。
         // tikhub をあとから起動しても、放っておけば繋がります。
@@ -191,6 +211,26 @@
         self.connected = false;
       };
     });
+  };
+
+  /**
+   * 中継サーバーに「この配信へ繋いで」と頼む。
+   * ブラウザから TikTok へ直接繋ぐわけではなく、tikhub に指示を出すだけです。
+   *
+   * @param {string} target LIVE の URL / 短縮 URL / @ユーザー名
+   * @returns {Promise<object>} { ok, message, live }
+   */
+  TikTokAdapter.prototype.connectLive = function (target) {
+    var base = (this.url || '').replace(/\/events$/, '') || 'http://127.0.0.1:8787';
+    return fetch(base + '/connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: target })
+    })
+      .then(function (res) { return res.json(); })
+      .catch(function (err) {
+        return { ok: false, message: '中継サーバーに届きませんでした (' + err.message + ')' };
+      });
   };
 
   TikTokAdapter.prototype.disconnect = function () {

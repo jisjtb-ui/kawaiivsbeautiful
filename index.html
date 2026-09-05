@@ -110,6 +110,20 @@
     <div class="flash" id="flash"></div>
     <div class="confetti" id="confetti"></div>
 
+    <!-- 配信に繋がっていないときだけ出す。ここに LIVE の URL を貼り付けると繋がる。
+         繋がれば消えるので、配信中の画面には出ない。 -->
+    <div class="setup" id="setup" hidden>
+      <div class="setup__box">
+        <div class="setup__title">TikTok LIVE の URL を貼り付けてください</div>
+        <form class="setup__form" id="setup-form">
+          <input class="setup__input" id="setup-input" type="text" autocomplete="off"
+                 placeholder="https://www.tiktok.com/@username/live">
+          <button class="setup__go" id="setup-go" type="submit">接続</button>
+        </form>
+        <div class="setup__hint" id="setup-hint">短縮 URL (vt.tiktok.com/...) や @ユーザー名 でも繋がります</div>
+      </div>
+    </div>
+
     <!-- TikTok と繋がっていないときだけ出る小さな表示。
          繋がっていれば消えるので、配信中は視界に入らない。 -->
     <div class="link" id="link" hidden></div>
