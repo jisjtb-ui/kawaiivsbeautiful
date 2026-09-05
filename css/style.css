@@ -23,6 +23,12 @@
 
 * { box-sizing: border-box; }
 
+/* hidden 属性は必ず効かせる。
+   ブラウザ標準の [hidden] { display:none } は「作者スタイル」に負けるため、
+   .setup のように display を指定した要素は hidden を付けても消えなかった。
+   JS 側が hidden を切り替えても画面から消えない、という食い違いを防ぐ。 */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   padding: 0;
