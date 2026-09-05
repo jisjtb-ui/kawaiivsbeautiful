@@ -934,3 +934,21 @@ body.obs-mode .controls { display: none; }
   color: rgba(255, 255, 255, 0.75);
 }
 .controls__note b { color: #ffd83d; }
+
+/* 配信の開始待ち。入力を求める場面ではないので欄を伏せる */
+.setup.is-waiting .setup__form { display: none; }
+.setup.is-waiting .setup__title { animation: link-blink 1.8s ease-in-out infinite; }
+.setup__cancel {
+  display: none;
+  margin: 22px auto 0;
+  padding: 12px 28px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: inherit;
+  font-size: 22px;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+.setup.is-waiting .setup__cancel { display: block; }

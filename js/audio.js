@@ -43,8 +43,23 @@
     };
     this.onNeedsGesture = options.onNeedsGesture || function () {};
 
-    this.tracks = {};        // teamId -> Audio
+    this.tracks = {};        // teamId -> Audio (配信に乗る音)
+    this.monitors = {};      // teamId -> Audio (自分だけが聞く音)
     this.sources = {};       // teamId -> 元の指定 (URL / File 名)
+
+    /**
+     * 出力の設定。
+     *
+     *   stream  … 配信に乗る側。OBS が拾う出力先を選ぶ
+     *   monitor … 自分の耳だけで聞く側。既定では鳴らさない
+     *
+     * 同じ曲を 2 つの Audio 要素で鳴らし、それぞれ別のデバイスへ出します。
+     * 1 つの要素は 1 つの出力先にしか出せないためです。
+     */
+    this.outputs = {
+      stream: { sinkId: '', volume: this.volume, enabled: true },
+      monitor: { sinkId: '', volume: 0.4, enabled: false },
+    };
     this.current = null;     // 今鳴らしているチーム
     this.wanted = null;      // 鳴らしたいチーム (操作待ちのときズレる)
     this.needsGesture = false;
@@ -56,16 +71,22 @@
    * 鳴っている最中に差し替えた場合は、その場で新しい曲に切り替えます。
    */
   AudioManager.prototype.setTrack = function (team, src, label) {
-    var old = this.tracks[team];
-    if (old) {
-      old.pause();
-      delete this.tracks[team];
-    }
+    [this.tracks, this.monitors].forEach(function (bag) {
+      if (bag[team]) {
+        bag[team].pause();
+        delete bag[team];
+      }
+    });
     delete this.sources[team];
 
     if (src) {
       this.tracks[team] = this.createAudio(src);
       this.sources[team] = label || src;
+      if (this.outputs.monitor.enabled) {
+        this.monitors[team] = this.createAudio(src);
+        this._applySink('monitor', this.monitors[team]);
+      }
+      this._applySink('stream', this.tracks[team]);
     }
 
     // 差し替えたのが今鳴らすべきチームなら、鳴らし直す
@@ -97,8 +118,8 @@
   /** 全部止める (ラウンド終了や試合終了で無音に戻したいとき)。 */
   AudioManager.prototype.stop = function () {
     var self = this;
-    Object.keys(this.tracks).forEach(function (team) {
-      self._fadeOut(self.tracks[team]);
+    [this.tracks, this.monitors].forEach(function (bag) {
+      Object.keys(bag).forEach(function (team) { self._fadeOut(bag[team]); });
     });
     this.current = null;
     this.wanted = null;
@@ -107,8 +128,11 @@
 
   AudioManager.prototype.setMuted = function (muted) {
     this.muted = Boolean(muted);
-    var playing = this.current && this.tracks[this.current];
-    if (playing) playing.volume = this.muted ? 0 : this.volume;
+    var self = this;
+    ['stream', 'monitor'].forEach(function (which) {
+      var el = self.current && self._bag(which)[self.current];
+      if (el) el.volume = self.muted ? 0 : self.outputs[which].volume;
+    });
     return this;
   };
 
@@ -121,38 +145,94 @@
     return this;
   };
 
-  AudioManager.prototype._apply = function () {
-    var team = this.wanted;
-    if (team === this.current) return;
-
-    var next = this.tracks[team];
-    if (!next) return;                    // その チームの曲が未設定なら何もしない
-
-    var previous = this.current && this.tracks[this.current];
-    if (previous) this._fadeOut(previous);
-
-    next.currentTime = 0;
-    next.volume = 0;
-    var self = this;
-    var played = next.play();
-
-    if (played && typeof played.catch === 'function') {
-      played.then(function () {
-        self.needsGesture = false;
-        self.onNeedsGesture(false);
-      }).catch(function () {
-        // ブラウザに止められた。最初の操作を待つ。
-        self.needsGesture = true;
-        self.current = null;
-        self.onNeedsGesture(true);
-      });
-    }
-    this._fadeIn(next);
-    this.current = team;
+  /** 出力先のデバイスを要素に反映する。setSinkId が無いブラウザでは何もしない。 */
+  AudioManager.prototype._applySink = function (which, el) {
+    var sinkId = this.outputs[which].sinkId;
+    if (!el || !sinkId || typeof el.setSinkId !== 'function') return;
+    el.setSinkId(sinkId).catch(function (err) {
+      console.warn('[KVB] 出力先を変更できませんでした:', err && err.message);
+    });
   };
 
-  AudioManager.prototype._fadeIn = function (el) {
-    this._fade(el, this.muted ? 0 : this.volume);
+  /**
+   * 出力の設定を変える。
+   *
+   * @param {'stream'|'monitor'} which
+   * @param {object} patch { sinkId, volume, enabled }
+   */
+  AudioManager.prototype.setOutput = function (which, patch) {
+    var out = this.outputs[which];
+    if (!out) return this;
+    Object.keys(patch).forEach(function (k) { out[k] = patch[k]; });
+
+    var self = this;
+    if (which === 'monitor') {
+      // 有効にした / 無効にしたタイミングで、聞く側の要素を作り直す
+      Object.keys(this.sources).forEach(function (team) {
+        if (out.enabled && !self.monitors[team]) {
+          self.monitors[team] = self.createAudio(self.tracks[team].src || self.sources[team]);
+        }
+        if (!out.enabled && self.monitors[team]) {
+          self.monitors[team].pause();
+          delete self.monitors[team];
+        }
+      });
+    }
+
+    Object.keys(this._bag(which)).forEach(function (team) {
+      self._applySink(which, self._bag(which)[team]);
+    });
+
+    // 今鳴らしている曲があれば、音量をその場で反映する
+    var playing = this.current && this._bag(which)[this.current];
+    if (playing) playing.volume = this.muted ? 0 : out.volume;
+    else if (out.enabled && this.current) this._apply(true);
+    return this;
+  };
+
+  AudioManager.prototype._bag = function (which) {
+    return which === 'monitor' ? this.monitors : this.tracks;
+  };
+
+  AudioManager.prototype._apply = function (force) {
+    var team = this.wanted;
+    if (team === this.current && !force) return;
+
+    var next = this.tracks[team];
+    if (!next) return;                    // そのチームの曲が未設定なら何もしない
+
+    var self = this;
+    var started = false;
+
+    ['stream', 'monitor'].forEach(function (which) {
+      var out = self.outputs[which];
+      var bag = self._bag(which);
+      var previous = self.current && bag[self.current];
+      if (previous && previous !== bag[team]) self._fadeOut(previous);
+
+      var el = bag[team];
+      if (!el || !out.enabled) return;
+
+      el.currentTime = 0;
+      el.volume = 0;
+      var played = el.play();
+      started = true;
+
+      if (played && typeof played.catch === 'function') {
+        played.then(function () {
+          self.needsGesture = false;
+          self.onNeedsGesture(false);
+        }).catch(function () {
+          // ブラウザに止められた。最初の操作を待つ。
+          self.needsGesture = true;
+          self.current = null;
+          self.onNeedsGesture(true);
+        });
+      }
+      self._fade(el, self.muted ? 0 : out.volume);
+    });
+
+    if (started) this.current = team;
   };
 
   AudioManager.prototype._fadeOut = function (el) {

@@ -163,3 +163,81 @@ test('板が動くたびに leadingTeam を渡しても、切り替わるのは�
   assert.deepStrictEqual(plays, ['play:beautiful.mp3', 'play:kawaii.mp3', 'play:beautiful.mp3'],
     '30 回の加算で再生は 3 回だけ');
 });
+
+
+// ------------------------------- 配信に乗る音と自分が聞く音の切り分け
+
+test('既定では配信側だけが鳴る', () => {
+  const { audio, log } = setup();
+  audio.setLeader('A');
+  assert.deepStrictEqual(log, ['play:kawaii.mp3'], '1 系統だけ');
+  assert.strictEqual(audio.outputs.monitor.enabled, false);
+});
+
+test('自分でも聞くようにすると 2 系統が鳴る', () => {
+  const { audio, log } = setup();
+  audio.setOutput('monitor', { enabled: true });
+  log.length = 0;
+
+  audio.setLeader('A');
+  assert.strictEqual(log.filter((l) => l === 'play:kawaii.mp3').length, 2, '配信用と自分用');
+});
+
+test('音量は配信側と自分側で別々に持つ', () => {
+  const { audio } = setup();
+  audio.setOutput('monitor', { enabled: true });
+  audio.setOutput('stream', { volume: 0.9 });
+  audio.setOutput('monitor', { volume: 0.2 });
+  audio.setLeader('A');
+
+  assert.strictEqual(audio.tracks.A.volume, 0.9, '配信に乗る音');
+  assert.strictEqual(audio.monitors.A.volume, 0.2, '自分が聞く音');
+});
+
+test('自分側を切ると、その音だけが止まる', () => {
+  const { audio, log } = setup();
+  audio.setOutput('monitor', { enabled: true });
+  audio.setLeader('A');
+  log.length = 0;
+
+  audio.setOutput('monitor', { enabled: false });
+  assert.ok(log.some((l) => l.startsWith('pause:')), '自分用は止まる');
+  assert.strictEqual(audio.monitors.A, undefined);
+  assert.ok(audio.tracks.A, '配信用は残る');
+});
+
+test('リードが変わると 2 系統とも切り替わる', () => {
+  const { audio, log } = setup();
+  audio.setOutput('monitor', { enabled: true });
+  audio.setLeader('A');
+  log.length = 0;
+
+  audio.setLeader('B');
+  assert.strictEqual(log.filter((l) => l === 'play:beautiful.mp3').length, 2);
+  assert.strictEqual(log.filter((l) => l === 'pause:kawaii.mp3').length, 2);
+});
+
+test('出力先を指定すると setSinkId が呼ばれる', () => {
+  const sinks = [];
+  const audio = new AudioManager({
+    fadeMs: 0,
+    createAudio: (src) => ({
+      src, volume: 0, currentTime: 0, loop: true,
+      play() { return Promise.resolve(); }, pause() {},
+      setSinkId(id) { sinks.push(src + ' -> ' + id); return Promise.resolve(); },
+    }),
+  });
+  audio.setOutput('stream', { sinkId: 'cable-input' });
+  audio.setTrack('A', 'kawaii.mp3');
+  assert.deepStrictEqual(sinks, ['kawaii.mp3 -> cable-input']);
+});
+
+test('setSinkId が無いブラウザでも落ちない', () => {
+  const audio = new AudioManager({
+    fadeMs: 0,
+    createAudio: (src) => ({ src, volume: 0, currentTime: 0, loop: true, play: () => Promise.resolve(), pause() {} }),
+  });
+  audio.setOutput('stream', { sinkId: 'whatever' });
+  assert.doesNotThrow(() => audio.setTrack('A', 'kawaii.mp3'));
+  assert.doesNotThrow(() => audio.setLeader('A'));
+});

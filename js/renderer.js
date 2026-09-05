@@ -54,6 +54,7 @@
       link: $('link'),
       setup: $('setup'),
       setupForm: $('setup-form'),
+      setupTitle: $('setup-title'),
       setupInput: $('setup-input'),
       setupGo: $('setup-go'),
       setupHint: $('setup-hint'),
@@ -423,14 +424,25 @@
    * @param {string} [hint] 下に出す説明 / エラー
    * @param {boolean} [isError]
    */
-  Renderer.prototype.setSetup = function (show, hint, isError) {
+  Renderer.prototype.setSetup = function (show, hint, isError, mode) {
     if (!this.el.setup) return;
     this.el.setup.hidden = !show;
+
+    // 'waiting' は「配信の開始待ち」。入力を求める場面ではないので、
+    // 見出しと入力欄を伏せて、待っていることだけを見せる。
+    var waiting = mode === 'waiting';
+    this.el.setup.classList.toggle('is-waiting', waiting);
+    if (this.el.setupTitle) {
+      this.el.setupTitle.textContent = waiting
+        ? '配信の開始を待っています'
+        : 'TikTok LIVE の URL を貼り付けてください';
+    }
+
     if (hint !== undefined && this.el.setupHint) {
       this.el.setupHint.textContent = hint;
       this.el.setupHint.classList.toggle('is-error', Boolean(isError));
     }
-    if (show && this.el.setupInput) this.el.setupInput.focus();
+    if (show && !waiting && this.el.setupInput) this.el.setupInput.focus();
   };
 
   Renderer.prototype.setSetupBusy = function (busy) {

@@ -120,13 +120,72 @@
       });
     });
 
-    var volume = document.getElementById('bgm-volume');
-    if (volume) {
-      volume.value = String(Math.round(config.audio.volume * 100));
-      volume.addEventListener('input', function () {
-        audio.volume = Number(volume.value) / 100;
-        var playing = audio.current && audio.tracks[audio.current];
-        if (playing) playing.volume = audio.volume;
+    // 配信に乗る音と、自分が聞く音を別々に設定できるようにする。
+    // 出力先を分けておくと、OBS には BGM を渡しつつ手元では小さく聞く、
+    // といった使い方ができる。
+    function bindVolume(id, which) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.value = String(Math.round(audio.outputs[which].volume * 100));
+      el.addEventListener('input', function () {
+        audio.setOutput(which, { volume: Number(el.value) / 100 });
+      });
+    }
+    bindVolume('bgm-volume', 'stream');
+    bindVolume('bgm-monitor-volume', 'monitor');
+
+    var monitorOn = document.getElementById('bgm-monitor-on');
+    if (monitorOn) {
+      monitorOn.addEventListener('change', function () {
+        audio.setOutput('monitor', { enabled: monitorOn.checked });
+      });
+    }
+
+    ['stream', 'monitor'].forEach(function (which) {
+      var sel = document.getElementById('bgm-sink-' + which);
+      if (!sel) return;
+      sel.addEventListener('change', function () {
+        audio.setOutput(which, { sinkId: sel.value });
+      });
+    });
+
+    // デバイス名は許可を得るまで空欄になるので、押されたときに読み込む
+    var devicesBtn = document.getElementById('bgm-devices');
+    if (devicesBtn) {
+      devicesBtn.addEventListener('click', function () {
+        var hint = document.getElementById('bgm-hint');
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(function (stream) {
+            stream.getTracks().forEach(function (t) { t.stop(); });
+            return navigator.mediaDevices.enumerateDevices();
+          })
+          .then(function (devices) {
+            var outs = devices.filter(function (d) { return d.kind === 'audiooutput'; });
+            ['stream', 'monitor'].forEach(function (which) {
+              var sel = document.getElementById('bgm-sink-' + which);
+              if (!sel) return;
+              sel.innerHTML = '<option value="">既定のデバイス</option>';
+              outs.forEach(function (d) {
+                var o = document.createElement('option');
+                o.value = d.deviceId;
+                o.textContent = d.label || d.deviceId;
+                sel.appendChild(o);
+              });
+            });
+            if (hint) hint.textContent = outs.length + ' 個の出力先が見つかりました';
+          })
+          .catch(function (err) {
+            if (hint) hint.textContent = '出力先を取得できませんでした: ' + err.message;
+          });
+      });
+    }
+
+    // 待機をやめて別の配信を指定できるようにする
+    var cancel = document.getElementById('setup-cancel');
+    if (cancel) {
+      cancel.addEventListener('click', function () {
+        var base = (tiktok.url || '').replace(/\/events$/, '');
+        fetch(base + '/disconnect', { method: 'POST' }).then(function () { refresh(); });
       });
     }
 
@@ -172,6 +231,13 @@
 
       var live = tiktok.live || {};
       var needsTarget = linked && tiktok.control && live.status !== 'connected';
+
+      // 'waiting' は失敗ではなく「配信の開始待ち」。始まれば自動で繋がるので、
+      // エラーとは別の見せ方にして、入力欄も伏せる。
+      if (live.status === 'waiting') {
+        renderer.setSetup(true, live.message || '配信の開始を待っています…', false, 'waiting');
+        return;
+      }
       renderer.setSetup(needsTarget, live.status === 'error' || live.status === 'ended'
         ? live.message
         : '短縮 URL (vt.tiktok.com/...) や @ユーザー名 でも繋がります',
@@ -201,7 +267,11 @@
         renderer.setSetup(true, '接続しています…', false);
         tiktok.connectLive(target).then(function (result) {
           renderer.setSetupBusy(false);
-          if (result && result.ok) {
+          var status = result && result.live && result.live.status;
+          if (status === 'waiting') {
+            input.value = '';
+            renderer.setSetup(true, result.message || '配信の開始を待っています…', false, 'waiting');
+          } else if (result && result.ok) {
             input.value = '';
             renderer.setSetup(false);
           } else {

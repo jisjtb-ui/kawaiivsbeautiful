@@ -114,13 +114,14 @@
          繋がれば消えるので、配信中の画面には出ない。 -->
     <div class="setup" id="setup" hidden>
       <div class="setup__box">
-        <div class="setup__title">TikTok LIVE の URL を貼り付けてください</div>
+        <div class="setup__title" id="setup-title">TikTok LIVE の URL を貼り付けてください</div>
         <form class="setup__form" id="setup-form">
           <input class="setup__input" id="setup-input" type="text" autocomplete="off"
                  placeholder="https://www.tiktok.com/@username/live">
           <button class="setup__go" id="setup-go" type="submit">接続</button>
         </form>
         <div class="setup__hint" id="setup-hint">短縮 URL (vt.tiktok.com/...) や @ユーザー名 でも繋がります</div>
+        <button type="button" class="setup__cancel" id="setup-cancel">別の配信を指定する</button>
       </div>
     </div>
 
@@ -202,11 +203,29 @@
         <input type="file" accept="audio/*" id="bgm-file-b">
       </label>
       <label class="bgm__row">
-        <span class="bgm__name">音量</span>
+        <span class="bgm__name">配信の音量</span>
         <input type="range" id="bgm-volume" min="0" max="100" value="60">
       </label>
+      <label class="bgm__row">
+        <span class="bgm__name">配信の出力先</span>
+        <select id="bgm-sink-stream"><option value="">既定のデバイス</option></select>
+      </label>
+
+      <label class="bgm__row">
+        <span class="bgm__name"><input type="checkbox" id="bgm-monitor-on"> 自分でも聞く</span>
+      </label>
+      <label class="bgm__row">
+        <span class="bgm__name">自分の音量</span>
+        <input type="range" id="bgm-monitor-volume" min="0" max="100" value="40">
+      </label>
+      <label class="bgm__row">
+        <span class="bgm__name">自分の出力先</span>
+        <select id="bgm-sink-monitor"><option value="">既定のデバイス</option></select>
+      </label>
+
+      <button type="button" class="btn btn--ghost" id="bgm-devices">出力先の一覧を読み込む</button>
       <button type="button" class="btn btn--ghost" id="bgm-stop">BGM 停止</button>
-      <p class="bgm__hint" id="bgm-hint">配信で使うなら js/config.js の theme.teamA.bgm にパスを書くと、毎回選ばずに済みます</p>
+      <p class="bgm__hint" id="bgm-hint">配信で使うなら js/config.js の theme.teamA.bgm にパスを書くと、毎回選ばずに済みます。<br>出力先を分けると、配信に乗る音と自分が聞く音を別デバイスにできます。</p>
     </div>
 
     <div class="controls__group controls__group--system">
