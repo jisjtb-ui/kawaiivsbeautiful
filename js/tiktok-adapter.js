@@ -23,7 +23,21 @@
     this.liveId = this.options.liveId || 'live-1';
     this.socket = null;
     this.connected = false;
+    this.warned = false;
+    this.url = null;
+    this._statusHandlers = [];
   }
+
+  /** 'connected' / 'disconnected' を受け取る (画面のインジケータ用)。 */
+  TikTokAdapter.prototype.onStatus = function (handler) {
+    this._statusHandlers.push(handler);
+    return this;
+  };
+
+  TikTokAdapter.prototype.emitStatus = function (status) {
+    var self = this;
+    this._statusHandlers.slice().forEach(function (h) { h(status, self.url); });
+  };
 
   /**
    * TikTok のイベントを 1 件流し込む唯一の入口。
@@ -53,6 +67,28 @@
   };
 
   /**
+   * 繋ぎにいく中継サーバーの URL を決める。
+   *
+   *   1. ?bridge=... が付いていればそれ
+   *   2. このページ自体が中継サーバーから配信されているなら、同じ場所の /events
+   *      (tikhub が http://127.0.0.1:8787/ でゲームごと配信している場合)
+   *   3. それ以外 (index.html を直接開いた場合) は 127.0.0.1:8787
+   *
+   * どの開き方でも設定なしで繋がるようにするための決め方です。
+   */
+  TikTokAdapter.resolveBridgeUrl = function (loc) {
+    loc = loc || global.location;
+    var params = new URLSearchParams(loc.search || '');
+    var explicit = params.get('bridge');
+    if (explicit) return explicit;
+
+    if (loc.protocol === 'http:' || loc.protocol === 'https:') {
+      return loc.origin + '/events';
+    }
+    return 'http://127.0.0.1:8787/events';
+  };
+
+  /**
    * 中継サーバーからイベントを受け取る。呼び出しは任意です。
    *
    * ブラウザから TikTok へ直接つなぐことはできないため、別プロセス
@@ -66,7 +102,8 @@
    * @param {string} [url] 例 http://localhost:8787/events
    */
   TikTokAdapter.prototype.connect = function (url) {
-    var target = url || this.options.url || 'http://localhost:8787/events';
+    var target = url || this.options.url || TikTokAdapter.resolveBridgeUrl();
+    this.url = target;
     return /^https?:/.test(target) ? this._connectSse(target) : this._connectWebSocket(target);
   };
 
@@ -82,8 +119,10 @@
       self.socket = source;
 
       source.onopen = function () {
+        var first = !self.connected;
         self.connected = true;
-        console.info('[KVB] TikTok イベントの受信を開始しました:', target);
+        if (first) console.info('[KVB] TikTok イベントの受信を開始しました:', target);
+        self.emitStatus('connected');
         resolve(true);
       };
 
@@ -98,13 +137,16 @@
       };
 
       source.onerror = function () {
-        // EventSource は自動で再接続するので、ここでは状態を落とすだけ
-        if (!self.connected) {
+        // EventSource は自動で再接続を続けるので、ここでは状態を落とすだけ。
+        // tikhub をあとから起動しても、放っておけば繋がります。
+        if (!self.connected && !self.warned) {
+          self.warned = true;
           console.warn('[KVB] 中継サーバーに接続できません:', target,
-                       '(tikhub を --serve 付きで起動してください)');
+                       '— tikhub を起動すると自動で繋がります');
           resolve(false);
         }
         self.connected = false;
+        self.emitStatus('disconnected');
       };
     });
   };

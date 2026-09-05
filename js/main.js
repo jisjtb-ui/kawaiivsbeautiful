@@ -80,5 +80,26 @@
     global.requestAnimationFrame(loop);
 
     engine.startMatch();
+
+    // --- TikTok への接続
+    //
+    // 中継サーバー (tikhub) へ自動でつなぎます。コンソールを開いて
+    // コマンドを打つ必要はありません。接続先は URL から決まります:
+    //
+    //   http://127.0.0.1:8787/         tikhub がゲームごと配信している -> 同じ場所へ
+    //   index.html を直接開いた場合     -> http://127.0.0.1:8787/events
+    //   ?bridge=http://... を付けた場合 -> その URL へ
+    //
+    // ?offline=1 を付けると接続しません (完全オフラインで動かしたいとき)。
+    var params = new URLSearchParams(global.location.search);
+    tiktok.onStatus(function (status) { renderer.setLink(status); });
+
+    if (params.get('offline') === '1' || params.has('offline')) {
+      renderer.setLink('connected');          // 出さない
+      console.info('[KVB] オフラインモードです (TikTok へ接続しません)');
+    } else {
+      renderer.setLink('disconnected');
+      void tiktok.connect();
+    }
   });
 })(window);

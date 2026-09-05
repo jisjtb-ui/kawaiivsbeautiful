@@ -51,6 +51,7 @@
       noticeUser: $('notice-user'),
       noticeDetail: $('notice-detail'),
       noticeEffect: $('notice-effect'),
+      link: $('link'),
       fever: $('fever'),
       feverMult: $('fever-mult'),
       feverTime: $('fever-time')
@@ -392,6 +393,19 @@
     if (!this.el.notice) return;
     this.el.notice.classList.remove('is-on');
     this.el.stage.classList.remove('noticed');
+  };
+
+  // ----------------------------------------------------------------- link
+
+  /**
+   * TikTok と繋がっているかの表示。繋がっていれば何も出しません。
+   * 繋がっていないことに気づけないと、配信中に「反応しない」で詰まるため。
+   */
+  Renderer.prototype.setLink = function (status, detail) {
+    if (!this.el.link) return;
+    var connected = status === 'connected';
+    this.el.link.hidden = connected;
+    if (!connected) this.el.link.textContent = detail || 'TIKTOK 未接続';
   };
 
   // ---------------------------------------------------------------- fever

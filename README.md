@@ -22,13 +22,11 @@ TikTok LIVE 連動の対抗戦ゲーム。
 | --- | --- |
 | `index.html` | テストパネル付き（開発・動作確認用） |
 | `index.html?obs=1` | 配信画面のみ（OBS 用） |
+| `index.html?offline=1` | TikTok に繋がない |
 
-ローカルサーバーで開きたい場合:
-
-```
-python3 -m http.server 8000
-# → http://localhost:8000/index.html
-```
+**TikTok の実配信と繋ぐ場合**は、tikhub を起動して出てくる
+`http://127.0.0.1:8787/` を開くだけです。コンソール操作は要りません
+（→ [11. TikTok LIVE につなぐ](#11-tiktok-live-につなぐ)）。
 
 ルールのテスト:
 
@@ -413,37 +411,69 @@ JP のギフト: 689 種
 ## 11. TikTok LIVE につなぐ
 
 ブラウザから TikTok へ直接つなぐことはできません。
-別プロセスでイベントを受信し、ブラウザへ中継します。
+別リポジトリ [`jisjtb-ui/tikhub`](https://github.com/jisjtb-ui/tikhub) の
+TikTok LIVE Event Server が受信して、ブラウザへ中継します。
 
-受信側は別リポジトリ [`jisjtb-ui/tikhub`](https://github.com/jisjtb-ui/tikhub) の
-TikTok LIVE Event Server を使います。
+**やることは 2 つだけです。**
 
-**1. 受信側を起動する**（tikhub のディレクトリで）
+**1.** tikhub のフォルダでコマンドを 1 行（Windows は `npm` を `npm.cmd` に）
 
 ```bash
-npm start -- <LIVE の URL> --serve
-#  → 接続しました (roomId: ...)
-#  → ゲーム画面への中継を開始しました: http://127.0.0.1:8787/events
+npm start -- https://www.tiktok.com/@username/live
 ```
 
-**2. ゲーム画面をつなぐ**（ブラウザのコンソールで）
+**2.** 出てきた URL をブラウザで開く
+
+```
+  ゲーム画面はこの URL をブラウザで開いてください
+      http://127.0.0.1:8787/
+```
+
+以上です。**コンソールにコマンドを打つ必要はありません。**
+ゲーム画面は読み込まれた時点で自動的に中継サーバーへ繋ぎます。
+
+### フォルダの置き方
+
+tikhub とゲームを**並べて**置くと、tikhub がゲームを見つけて配信します。
+
+```
+Downloads\
+  ├── tikhub-.../              ← ここで npm start
+  └── kawaiivsbeautiful-.../   ← 自動で見つかる
+```
+
+並べていなくても構いません。その場合は `index.html` を直接開いてください。
+やはり自動で `http://127.0.0.1:8787` へ繋ぎにいきます。
+
+### 繋がっていないとき
+
+画面の右上に **`TIKTOK 未接続`** と出ます。これが出ている間はイベントが届いていません。
+
+tikhub をあとから起動すれば、**ゲーム画面を開き直さなくても自動で繋がります**
+（表示も自動で消えます）。tikhub を止めると再び出ます。
+
+### URL で変えられること
+
+| URL | 動き |
+| --- | --- |
+| `index.html` | 自動で `http://127.0.0.1:8787/events` に繋ぐ |
+| `index.html?obs=1` | 配信画面のみ（テストパネルを隠す） |
+| `index.html?offline=1` | TikTok に繋がない（完全オフラインで動かす） |
+| `index.html?bridge=http://192.168.0.5:8787/events` | 別の PC の tikhub に繋ぐ |
+
+組み合わせも使えます（`index.html?obs=1&offline=1` など）。
+
+手動で繋ぎ直したいときはコンソールから叩けます。
 
 ```js
-KVB.tiktok.connect('http://127.0.0.1:8787/events');
-//  → [KVB] TikTok イベントの受信を開始しました
+KVB.tiktok.connect();                                  // 自動で決めた接続先へ
+KVB.tiktok.connect('http://192.168.0.5:8787/events');  // 明示指定
 ```
 
-これで視聴者が `A` / `B` とコメントすると、ゲーム画面に `@username → A TEAM` が出ます。
-
-- 中継は **SSE** です。切断されるとブラウザが自動で再接続します。
-- `ws://` の URL を渡せば WebSocket でも繋げます。
-- **`connect()` を呼ばなければネットワークアクセスは一切発生せず**、
-  これまでどおり完全オフラインで動きます。
-
-受け付けるイベントの形:
+### 受け付けるイベントの形
 
 ```json
-{ "type": "chat",   "user": { "id": "7543...", "uniqueId": "taro", "nickname": "タロー" }, "comment": "A" }
+{ "type": "chat",   "user": { "id": "7543...", "uniqueId": "taro", "nickname": "タロー" }, "comment": "kawaii" }
 { "type": "gift",   "user": { "id": "7543...", "uniqueId": "taro" }, "giftId": 5655, "diamondCount": 1, "repeatCount": 5 }
 { "type": "like",   "user": { "id": "7543...", "uniqueId": "taro" }, "count": 15 }
 { "type": "follow", "user": { "id": "7543...", "uniqueId": "taro" } }

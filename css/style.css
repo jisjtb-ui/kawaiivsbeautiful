@@ -792,3 +792,30 @@ body.obs-mode .controls { display: none; }
 .btn--gift  { background: linear-gradient(180deg, #7a4dff, #4a2bb0); }
 .btn--like  { background: linear-gradient(180deg, #ff7ab8, #b03c74); }
 .btn--fever { background: linear-gradient(180deg, #ffd83d, #b58a00); color: #201500; }
+
+
+/* =========================================================================
+   LINK - TikTok と繋がっていないときだけ出す小さな表示
+   繋がれば消えるので、配信中の画面には出ない。
+   ========================================================================= */
+
+.link {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  z-index: 8;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 216, 61, 0.5);
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffd83d;
+  font-size: 22px;
+  letter-spacing: 3px;
+  line-height: 1;
+  animation: link-blink 1.6s ease-in-out infinite;
+}
+
+@keyframes link-blink {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
