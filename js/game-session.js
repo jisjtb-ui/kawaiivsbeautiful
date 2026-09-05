@@ -61,8 +61,10 @@
     this.now = options.now || function () { return Date.now(); };
     this.random = options.random || Math.random;
 
-    this.teamA = this.config.teams.a;
-    this.teamB = this.config.teams.b;
+    // テーマから取り出すのは id だけ。表示名や合言葉はルールの判定に使いません。
+    this.theme = this.config.theme;
+    this.teamA = this.theme.teamA.id;
+    this.teamB = this.theme.teamB.id;
 
     // userId -> { userId, uniqueId, displayName, team }
     // ラウンド中は固定。GIFT / LIKE / FOLLOW も同じ userId でここを引きます。
@@ -83,16 +85,25 @@
     var self = this;
     if (!this.engine || !this.engine.on) return;
     this.engine.on('round:start', function () {
-      if (self.config.resetTeamsEachRound) self.resetRound();
+      // チーム所属は LIVE セッション単位なので、ラウンドをまたいでも消しません。
+      // 消えるのは FEVER のような、そのラウンド限りの状態だけです。
+      if (self.config.resetTeamsOnRound) self.endSession();
+      else self._endFever();
     });
   };
 
-  /** ラウンドが変わったら所属・LIKE の貯金・FEVER を白紙に戻す。 */
-  GameSession.prototype.resetRound = function () {
+  /**
+   * この LIVE のユーザー情報を白紙に戻す。
+   *
+   * ラウンドの切り替えでは呼ばれません。**次の LIVE を始めるときだけ**呼びます。
+   * 呼ぶと全員が未所属に戻り、もう一度合言葉をコメントできるようになります。
+   */
+  GameSession.prototype.endSession = function () {
     this.members = {};
     this.membersByUniqueId = {};
     this.likeBuckets = {};
     this._endFever();
+    this.emit('session:reset', null);
     return this;
   };
 
@@ -163,14 +174,14 @@
     return member;
   };
 
-  /** チームの表示名。'A TEAM' / 'B TEAM' (config で変更可)。 */
-  GameSession.prototype.teamLabel = function (team) {
-    return team === this.teamA ? this.config.teams.labelA : this.config.teams.labelB;
+  /** チームのテーマ定義。id から引く。 */
+  GameSession.prototype.teamTheme = function (team) {
+    return team === this.teamA ? this.theme.teamA : this.theme.teamB;
   };
 
-  /** 開発ログ用の短い名前。'A' / 'B'。 */
-  GameSession.prototype.teamLetter = function (team) {
-    return team === this.teamA ? 'A' : 'B';
+  /** 画面に出す名前。今回のテーマなら 'KAWAII' / 'BEAUTIFUL'。 */
+  GameSession.prototype.teamLabel = function (team) {
+    return this.teamTheme(team).displayName;
   };
 
   // ------------------------------------------------------------- FEVER
@@ -259,13 +270,28 @@
     }
   };
 
-  GameSession.prototype._handleComment = function (event) {
-    var text = normalizeComment(event.text);
-    var cfg = this.config.comment;
+  /**
+   * コメントが「参加の合言葉」かどうか。完全一致 (大文字小文字は無視) のみ。
+   * 'kawaii最高' や 'I love kawaii' は参加とみなしません。
+   */
+  GameSession.prototype.teamForKeyword = function (text) {
+    var word = normalizeComment(text);
+    if (!word) return null;
 
-    var requested = null;
-    if (cfg.a.indexOf(text) !== -1) requested = this.teamA;
-    else if (cfg.b.indexOf(text) !== -1) requested = this.teamB;
+    var sides = [this.theme.teamA, this.theme.teamB];
+    for (var i = 0; i < sides.length; i++) {
+      var side = sides[i];
+      if (word === String(side.keyword).toLowerCase()) return side.id;
+      var aliases = side.aliases || [];
+      for (var j = 0; j < aliases.length; j++) {
+        if (word === String(aliases[j]).toLowerCase()) return side.id;
+      }
+    }
+    return null;
+  };
+
+  GameSession.prototype._handleComment = function (event) {
+    var requested = this.teamForKeyword(event.text);
     if (!requested) return false;          // 「こんにちは」などの普通のコメントは無視
 
     var before = this.getMember(event.user);

@@ -6,15 +6,21 @@ const { CONFIG } = require('../js/config.js');
 const { EventRouter } = require('../js/event-router.js');
 const { GameSession } = require('../js/game-session.js');
 
-/** CONFIG を壊さないように毎回コピーしてから上書きする。 */
-function makeConfig(overrides = {}) {
-  const clone = JSON.parse(JSON.stringify(CONFIG));
+/** CONFIG を壊さないように毎回コピーしてから上書きする (入れ子も辿る)。 */
+function merge(base, overrides) {
   for (const [key, value] of Object.entries(overrides)) {
-    clone[key] = (value && typeof value === 'object' && !Array.isArray(value))
-      ? Object.assign(clone[key] || {}, value)
-      : value;
+    if (value && typeof value === 'object' && !Array.isArray(value) &&
+        base[key] && typeof base[key] === 'object' && !Array.isArray(base[key])) {
+      merge(base[key], value);
+    } else {
+      base[key] = value;
+    }
   }
-  return clone;
+  return base;
+}
+
+function makeConfig(overrides = {}) {
+  return merge(JSON.parse(JSON.stringify(CONFIG)), overrides);
 }
 
 /** 時計を手で進められるセットアップ。実時間に依存しないテストが書ける。 */

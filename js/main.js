@@ -48,15 +48,16 @@
     session.on('notice', function (notice) { renderer.showNotice(notice); });
 
     // 開発確認用のログ。ブラウザのコンソールにだけ出し、ゲーム画面には出さない。
+    // 内部 ID と表示名の両方を出すので、テーマを差し替えても対応が追える。
     //
-    //   [COMMENT] @Taro: A
-    //   [TEAM] @Taro → A
-    //   [TEAM] @Taro → ALREADY A      (すでに所属済みでチームが変わらなかった)
+    //   [COMMENT] @Taro: kawaii
+    //   [TEAM] @Taro → A / KAWAII
+    //   [TEAM] @Taro → ALREADY A / KAWAII   (所属済みでチームが変わらなかった)
     session.on('team:select', function (data) {
       var name = '@' + data.member.uniqueId;
-      var letter = session.teamLetter(data.member.team);
+      var team = data.member.team + ' / ' + session.teamLabel(data.member.team);
       console.log('[COMMENT] ' + name + ': ' + data.text);
-      console.log('[TEAM] ' + name + ' \u2192 ' + (data.joined ? letter : 'ALREADY ' + letter));
+      console.log('[TEAM] ' + name + ' \u2192 ' + (data.joined ? team : 'ALREADY ' + team));
     });
 
     // コンソール / OBS スクリプト / 将来の TikTok 接続から触れるように公開する

@@ -1,6 +1,12 @@
 # KAWAII vs BEAUTIFUL
 
 TikTok LIVE 連動の対抗戦ゲーム。
+
+> **これは「A VS B」の汎用対戦エンジンです。**
+> ゲームロジックが知っているのはチーム ID の `A` / `B` だけで、
+> `KAWAII` / `BEAUTIFUL` は `js/config.js` の `theme` に書かれた今回のテーマです。
+> テーマを差し替えれば `MRBEAST VS ISHOWSPEED` にも `Team Red VS Team Blue` にもなります
+> （→ [テーマを差し替える](#41-テーマを差し替える)）。
 視聴者の **ギフト / いいね / フォロー / コメント** がそのまま試合を動かします。
 
 外部ライブラリ・ビルド・サーバーなしで、ブラウザだけで動きます
@@ -27,7 +33,7 @@ python3 -m http.server 8000
 ルールのテスト:
 
 ```
-npm test        # 84 件。ブラウザ不要
+npm test        # 86 件。ブラウザ不要
 npm run gifts   # TikTok のギフト一覧を取得（後述）
 ```
 
@@ -37,8 +43,8 @@ npm run gifts   # TikTok のギフト一覧を取得（後述）
 
 | 操作 | 起きること |
 | --- | --- |
-| コメントに **`A`** | KAWAII (A TEAM) に参加。画面に `@username → A TEAM` が出る |
-| コメントに **`B`** | BEAUTIFUL (B TEAM) に参加。画面に `@username → B TEAM` が出る |
+| コメントに **`kawaii`** | Team **A** に参加。画面に `@username → KAWAII` が出る |
+| コメントに **`beautiful`** | Team **B** に参加。画面に `@username → BEAUTIFUL` が出る |
 | **ギフト** | 自分のチームの板が増える（ギフトの価値ぶん） |
 | **Banana Peel**（攻撃ギフト） | **相手チームの板を 10 枚剥がす** |
 | **いいね 100 回** | 自分のチームの板が 1 枚増える |
@@ -46,14 +52,17 @@ npm run gifts   # TikTok のギフト一覧を取得（後述）
 
 補足:
 
-- 判定は **`A` / `B` の完全一致**です（小文字・全角Ａ／Ｂ・前後の空白は許容）。
-  `Aでいく` `Bチーム` `私はA` のような文章は対象外です（MVP）。
-  `こんにちは` `かわいい` などの通常コメントは無視します。
+- 判定は**合言葉の完全一致**です。大文字小文字は区別せず、前後の空白は無視します。
+  `kawaii` `KAWAII` `Kawaii` はすべて Team A です。
+  `kawaii最高` `I love kawaii` `beautiful team` のように**含むだけの文章は対象外**です。
+  `こんにちは` などの通常コメントも無視します。
 - 所属したあとは抽選されません。ギフトもいいねも必ず自分のチームへ入ります。
   所属前に貯めたいいねの端数も、そのまま引き継がれます。
-- 一度チームに入ると、**そのラウンド中は変更できません**。
-  `A` のあとに `B` とコメントしても移動しません。重複登録もしません。
+- 一度チームに入ると、**その LIVE が終わるまで変更できません**。
+  ラウンドが変わっても維持されます。`kawaii` のあとに `beautiful` とコメントしても
+  移動しません。重複登録もしません。
 - 所属は **TikTok の userId** に紐付きます。ユーザー名を変えても所属は変わりません。
+- 次の LIVE のために消すときは `KVB.session.endSession()` を呼びます。
 - **所属が決まるのは `A` / `B` のコメントだけです。**
   まだどちらにも入っていない人のギフト・いいねは、**1 件ごとに A/B を抽選**して
   そちらへ効果を入れますが、**その人を所属させることはしません**。
@@ -119,7 +128,7 @@ npm run gifts   # TikTok のギフト一覧を取得（後述）
 
 ```
    @Taro         @Hanako          @Ken          @Yuki
-    +25         FEVER +15s      100 LIKE      → A TEAM
+    +25         FEVER +15s      100 LIKE      → KAWAII
                                     +1
 ```
 
@@ -145,8 +154,13 @@ npm run gifts   # TikTok のギフト一覧を取得（後述）
 
 | 設定 | 既定値 | 意味 |
 | --- | --- | --- |
-| `teams.a` / `teams.b` | `kawaii` / `beautiful` | コメントの A / B がどちらのチームか |
-| `teams.labelA` / `labelB` | `A TEAM` / `B TEAM` | 振り分け通知の表示名 |
+| `theme.title` | `KAWAII VS BEAUTIFUL` | 中央のタイトルとブラウザのタブ名 |
+| `theme.teamA.displayName` | `KAWAII` | 画面に出す名前（内部 ID は常に `A`） |
+| `theme.teamA.keyword` | `kawaii` | 参加の合言葉 |
+| `theme.teamA.aliases` | `[]` | 合言葉の別名。`['a']` を足せば `a` でも参加できる |
+| `theme.teamA.colors` | ピンク3色 | テーマカラー。起動時に CSS 変数へ流し込まれる |
+| `theme.teamA.icon` / `image` | `null` | 将来用の差し替え口 |
+| `theme.teamB.*` | 同上 | 内部 ID は常に `B` |
 | `comment.a` / `comment.b` | `['a','ａ']` / `['b','ｂ']` | チーム参加とみなすコメント（完全一致） |
 | `likes.perBoard` | `100` | 何 LIKE で 1 区切りか |
 | `likes.boardsPerMilestone` | `1` | 区切り 1 回で積む枚数 |
@@ -196,20 +210,65 @@ JP の 689 種すべてが自動的に正しい価値になります。`byId` �
 
 ---
 
+### 4.1 テーマを差し替える
+
+`js/config.js` の `theme` だけを書き換えます。**ゲームロジックは 1 行も触りません。**
+
+```js
+theme: {
+  title: 'MRBEAST VS ISHOWSPEED',
+  teamA: {
+    id: 'A',                       // ← ID は固定。変えない
+    displayName: 'MRBEAST',
+    keyword: 'mrbeast',
+    aliases: [],
+    colors: { base: '#ff7a29', light: '#ffc08a', dark: '#5c2600' },
+    icon: null, image: null
+  },
+  teamB: {
+    id: 'B',
+    displayName: 'ISHOWSPEED',
+    keyword: 'ishowspeed',
+    aliases: [],
+    colors: { base: '#7cff5a', light: '#c6ffb8', dark: '#1d4a10' },
+    icon: null, image: null
+  }
+}
+```
+
+これだけで、スコアボード・中央タイトル・タワーの見出し・振り分け通知・配色・
+参加の合言葉・ブラウザのタブ名がすべて入れ替わります。
+チーム ID は `A` / `B` のままなので、板・ラウンド・カウントダウン・FEVER・
+攻撃ギフトのルールは何も影響を受けません。
+
+**守るべき分離:**
+
+| | 何 | どこ |
+| --- | --- | --- |
+| `A` / `B` | システム共通のチーム ID。**判定に使うのは常にこれ** | `js/game.js` の `TEAM` |
+| `KAWAII` / `BEAUTIFUL` | 今回のテーマの表示名 | `js/config.js` の `theme` |
+
+ゲームロジックの中で `'KAWAII'` のような表示名を条件に使わないでください。
+DOM の id と CSS のクラスも `-a` / `-b` のスロット名にしてあり、
+配色は `--team-a-*` / `--team-b-*` に起動時へ流し込まれます。
+
+---
+
 ## 5. 開発用の確認表示
 
 チーム振り分けはブラウザのコンソールにも出ます。**ゲーム画面には出しません。**
 
 ```
-[COMMENT] @Taro: A
-[TEAM] @Taro → A
-[COMMENT] @Taro: B
-[TEAM] @Taro → ALREADY A      ← 所属済みなので変わらない
-[COMMENT] @Hanako: B
-[TEAM] @Hanako → B
+[COMMENT] @Taro: kawaii
+[TEAM] @Taro → A / KAWAII
+[COMMENT] @Taro: beautiful
+[TEAM] @Taro → ALREADY A / KAWAII      ← 所属済みなので変わらない
+[COMMENT] @Hanako: BEAUTIFUL
+[TEAM] @Hanako → B / BEAUTIFUL
 ```
 
-`A` / `B` 以外のコメントでは何も出ません（ログが埋もれないように）。
+内部 ID と表示名の両方を出すので、テーマを差し替えても対応が追えます。
+合言葉以外のコメントでは何も出ません（ログが埋もれないように）。
 配信を受けている側（tikhub のターミナル）には、これまでどおり受信したイベントが出ます。
 
 ---
@@ -223,12 +282,15 @@ TikTok Connector      js/tiktok-adapter.js   受信するだけ
         ↓
 Event Router          js/event-router.js     TikTok の語彙をここで捨てる
         ↓  Game Event  { GIFT | LIKE | FOLLOW | COMMENT }
-Game Session          js/game-session.js     チーム / LIKE 累積 / FEVER
-        ↓
+Game Session          js/game-session.js     チーム所属 / LIKE 累積 / FEVER
+        ↓  team = 'A' | 'B'
 Game Logic            js/game.js             板・ラウンド・試合
         ↓
-UI                    js/renderer.js         描くだけ
+UI                    js/renderer.js         描くだけ (表示名は theme から)
 ```
+
+例: `COMMENT "kawaii"` → `TEAM_SELECT` → `team = 'A'` → UI が `theme.teamA.displayName`
+を引いて `@username → KAWAII` と表示する。TikTok の受信口が画面を直接触ることはありません。
 
 - **`js/game.js` と `js/game-session.js` は TikTok を一切参照しません。**
   Event Router を通った時点で `giftId` も `diamondCount` も `uniqueId` も消え、
@@ -259,7 +321,7 @@ router.dispatch('live-b', eventFromLiveB);   // → Game B だけが動く
 ```
 index.html                # 1920x1080 のステージ + テストパネル
 css/style.css             # 見た目・アニメーション
-js/config.js              # ★設定値はすべてここ
+js/config.js              # ★設定値とテーマ (A/B の表示名・合言葉・色) はすべてここ
 js/game.js                # ゲームロジック（DOM も TikTok も知らない）
 js/game-session.js        # ★ルール層：チーム所属 / LIKE 累積 / FEVER
 js/event-router.js        # ★TikTok イベント → ゲームイベント + LIVE ごとの振り分け
@@ -280,7 +342,7 @@ test/                     # ルールのテスト（node --test）
 
 | 操作 | キー | 起きること |
 | --- | --- | --- |
-| コメント `A` / `B` | `1` / `2` | チームに参加 |
+| 合言葉のコメント | `1` / `2` | チームに参加（テーマの `keyword` を送ります） |
 | ギフト | `G` | 板が増える + `@user +N` の通知 |
 | 攻撃ギフト | `X` | 相手の板が減る + `@user -N` の通知（赤） |
 | いいね +20 | `K` | 5 回で 100 に到達 → `100 LIKE +1` の通知 |

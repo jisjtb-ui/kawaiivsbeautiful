@@ -1,16 +1,18 @@
 /* =========================================================================
-   KAWAII vs BEAUTIFUL - broadcast stage styling
+   Broadcast stage styling. Team colours come from the theme in
+   js/config.js and are written into --team-a-* / --team-b-* at startup;
+   the values below are only the fallback for the current theme.
    The stage is authored at a fixed 1920x1080 and scaled by js/renderer.js,
    so every value below is in "1080p pixels".
    ========================================================================= */
 
 :root {
-  --kawaii-1: #ff4f9d;
-  --kawaii-2: #ff9ecb;
-  --kawaii-3: #7a0b3d;
-  --beautiful-1: #26d7ff;
-  --beautiful-2: #9be9ff;
-  --beautiful-3: #06405a;
+  --team-a-1: #ff4f9d;
+  --team-a-2: #ff9ecb;
+  --team-a-3: #7a0b3d;
+  --team-b-1: #26d7ff;
+  --team-b-2: #9be9ff;
+  --team-b-3: #06405a;
   --ink: #ffffff;
   --bg-0: #05030c;
   --bg-1: #140a26;
@@ -78,11 +80,11 @@ body.obs-mode .controls { display: none; }
   transition: opacity 0.6s ease;
   pointer-events: none;
 }
-.bg-glow--kawaii    { left: -220px;  background: var(--kawaii-1); }
-.bg-glow--beautiful { right: -220px; background: var(--beautiful-1); }
+.bg-glow--a    { left: -220px;  background: var(--team-a-1); }
+.bg-glow--b { right: -220px; background: var(--team-b-1); }
 
-.stage.lead-kawaii    .bg-glow--kawaii    { opacity: 0.6; }
-.stage.lead-beautiful .bg-glow--beautiful { opacity: 0.6; }
+.stage.lead-a    .bg-glow--a    { opacity: 0.6; }
+.stage.lead-b .bg-glow--b { opacity: 0.6; }
 
 .bg-grid {
   position: absolute;
@@ -116,11 +118,11 @@ body.obs-mode .controls { display: none; }
   gap: 26px;
   letter-spacing: 3px;
 }
-.scoreboard__side--beautiful { flex-direction: row; }
+.scoreboard__side--b { flex-direction: row; }
 
 .scoreboard__name { font-size: 52px; opacity: 0.9; }
-.scoreboard__side--kawaii    .scoreboard__name { color: var(--kawaii-2); }
-.scoreboard__side--beautiful .scoreboard__name { color: var(--beautiful-2); }
+.scoreboard__side--a    .scoreboard__name { color: var(--team-a-2); }
+.scoreboard__side--b .scoreboard__name { color: var(--team-b-2); }
 
 .scoreboard__score {
   font-size: 92px;
@@ -130,8 +132,8 @@ body.obs-mode .controls { display: none; }
   text-shadow: 0 0 30px currentColor;
   transition: transform 0.25s ease;
 }
-.scoreboard__side--kawaii    .scoreboard__score { color: var(--kawaii-1); }
-.scoreboard__side--beautiful .scoreboard__score { color: var(--beautiful-1); }
+.scoreboard__side--a    .scoreboard__score { color: var(--team-a-1); }
+.scoreboard__side--b .scoreboard__score { color: var(--team-b-1); }
 .scoreboard__score.bump { animation: score-bump 0.6s ease; }
 
 @keyframes score-bump {
@@ -198,8 +200,8 @@ body.obs-mode .controls { display: none; }
   transform-origin: bottom center;
 }
 
-.team--kawaii.shake .tower__frame,
-.team--beautiful.shake .tower__frame { animation: shake 0.45s ease; }
+.team--a.shake .tower__frame,
+.team--b.shake .tower__frame { animation: shake 0.45s ease; }
 
 @keyframes shake {
   0%, 100% { transform: translateX(0) rotate(0deg); }
@@ -241,18 +243,18 @@ body.obs-mode .controls { display: none; }
   z-index: 2;
 }
 
-.team--kawaii .tower__fill {
+.team--a .tower__fill {
   background-image: repeating-linear-gradient(
     180deg,
-    #ff7ab8 0px, var(--kawaii-1) 12px,
-    var(--kawaii-3) 12px, var(--kawaii-3) 15px);
+    #ff7ab8 0px, var(--team-a-1) 12px,
+    var(--team-a-3) 12px, var(--team-a-3) 15px);
   box-shadow: 0 0 60px rgba(255, 79, 157, 0.65);
 }
-.team--beautiful .tower__fill {
+.team--b .tower__fill {
   background-image: repeating-linear-gradient(
     180deg,
-    #7ae7ff 0px, var(--beautiful-1) 12px,
-    var(--beautiful-3) 12px, var(--beautiful-3) 15px);
+    #7ae7ff 0px, var(--team-b-1) 12px,
+    var(--team-b-3) 12px, var(--team-b-3) 15px);
   box-shadow: 0 0 60px rgba(38, 215, 255, 0.65);
 }
 
@@ -319,8 +321,8 @@ body.obs-mode .controls { display: none; }
   font-size: 46px;
   letter-spacing: 10px;
 }
-.team--kawaii    .team__label { color: var(--kawaii-2); }
-.team--beautiful .team__label { color: var(--beautiful-2); }
+.team--a    .team__label { color: var(--team-a-2); }
+.team--b .team__label { color: var(--team-b-2); }
 
 .team__count {
   display: flex;
@@ -332,8 +334,8 @@ body.obs-mode .controls { display: none; }
   line-height: 1;
   transition: transform 0.15s ease, color 0.2s ease;
 }
-.team--kawaii    .team__count-value { color: var(--kawaii-1); text-shadow: 0 0 34px var(--kawaii-1); }
-.team--beautiful .team__count-value { color: var(--beautiful-1); text-shadow: 0 0 34px var(--beautiful-1); }
+.team--a    .team__count-value { color: var(--team-a-1); text-shadow: 0 0 34px var(--team-a-1); }
+.team--b .team__count-value { color: var(--team-b-1); text-shadow: 0 0 34px var(--team-b-1); }
 .team__count-value.pop  { transform: scale(1.22); }
 .team__count-value.hurt { color: var(--danger) !important; text-shadow: 0 0 34px var(--danger) !important; }
 .team__count-unit { font-size: 34px; opacity: 0.45; }
@@ -360,8 +362,8 @@ body.obs-mode .controls { display: none; }
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 .center__word { font-size: 86px; letter-spacing: 8px; }
-.center__word--kawaii    { color: var(--kawaii-1);    text-shadow: 0 0 40px var(--kawaii-1); }
-.center__word--beautiful { color: var(--beautiful-1); text-shadow: 0 0 40px var(--beautiful-1); }
+.center__word--a    { color: var(--team-a-1);    text-shadow: 0 0 40px var(--team-a-1); }
+.center__word--b { color: var(--team-b-1); text-shadow: 0 0 40px var(--team-b-1); }
 .center__vs {
   font-size: 130px;
   margin: 6px 0;
@@ -410,8 +412,8 @@ body.obs-mode .controls { display: none; }
   align-items: center;
   justify-content: center;
 }
-.countdown.team-kawaii    .countdown__label { color: var(--kawaii-2); }
-.countdown.team-beautiful .countdown__label { color: var(--beautiful-2); }
+.countdown.team-a    .countdown__label { color: var(--team-a-2); }
+.countdown.team-b .countdown__label { color: var(--team-b-2); }
 
 .countdown__number {
   font-size: 300px;
@@ -419,8 +421,8 @@ body.obs-mode .controls { display: none; }
   color: #fff;
   opacity: 1;
 }
-.countdown.team-kawaii    .countdown__number { text-shadow: 0 0 60px var(--kawaii-1), 0 0 140px var(--kawaii-1); }
-.countdown.team-beautiful .countdown__number { text-shadow: 0 0 60px var(--beautiful-1), 0 0 140px var(--beautiful-1); }
+.countdown.team-a    .countdown__number { text-shadow: 0 0 60px var(--team-a-1), 0 0 140px var(--team-a-1); }
+.countdown.team-b .countdown__number { text-shadow: 0 0 60px var(--team-b-1), 0 0 140px var(--team-b-1); }
 .countdown__number.tick { animation: count-tick 0.5s ease-out; }
 
 @keyframes count-tick {
@@ -481,8 +483,8 @@ body.obs-mode .controls { display: none; }
   letter-spacing: 12px;
   opacity: 0.75;
 }
-.banner--kawaii    .banner__main { color: var(--kawaii-1); }
-.banner--beautiful .banner__main { color: var(--beautiful-1); }
+.banner--a    .banner__main { color: var(--team-a-1); }
+.banner--b .banner__main { color: var(--team-b-1); }
 .banner--danger    .banner__main { color: var(--danger); }
 .banner--neutral   .banner__main { color: #fff; }
 
@@ -576,8 +578,8 @@ body.obs-mode .controls { display: none; }
   font-size: 18px;
   opacity: 0.8;
 }
-.controls__group--kawaii    h3 { color: var(--kawaii-2); }
-.controls__group--beautiful h3 { color: var(--beautiful-2); }
+.controls__group--a    h3 { color: var(--team-a-2); }
+.controls__group--b h3 { color: var(--team-b-2); }
 
 .btn {
   font-family: var(--font);
@@ -595,8 +597,8 @@ body.obs-mode .controls { display: none; }
 .btn small { display: block; font-size: 12px; opacity: 0.7; letter-spacing: 1px; }
 .btn:hover  { filter: brightness(1.2); }
 .btn:active { transform: scale(0.95); }
-.btn--kawaii    { background: linear-gradient(135deg, var(--kawaii-1), #b3005e); }
-.btn--beautiful { background: linear-gradient(135deg, var(--beautiful-1), #0072a3); color: #04222e; }
+.btn--a    { background: linear-gradient(135deg, var(--team-a-1), #b3005e); }
+.btn--b { background: linear-gradient(135deg, var(--team-b-1), #0072a3); color: #04222e; }
 .btn--attack    { background: linear-gradient(135deg, #ff7a18, #b32100); }
 .btn--ghost     { background: rgba(255, 255, 255, 0.09); border: 1px solid rgba(255, 255, 255, 0.2); }
 
@@ -701,8 +703,8 @@ body.obs-mode .controls { display: none; }
   text-shadow: 0 0 40px currentColor, 0 6px 30px rgba(0, 0, 0, 0.8);
 }
 
-.notice--kawaii    .notice__effect { color: var(--kawaii-2); }
-.notice--beautiful .notice__effect { color: var(--beautiful-2); }
+.notice--a    .notice__effect { color: var(--team-a-2); }
+.notice--b .notice__effect { color: var(--team-b-2); }
 .notice--fever     .notice__effect { color: #ffd83d; font-size: 104px; }
 /* チーム色より後に置いて、攻撃は必ず赤で出す (誰が損したかより「damage」が先) */
 .notice--attack    .notice__effect { color: var(--danger); }
@@ -715,12 +717,12 @@ body.obs-mode .controls { display: none; }
   margin-right: 24px;
   opacity: 0.55;
 }
-.notice--team.notice--kawaii    .notice__effect { color: var(--kawaii-2); }
-.notice--team.notice--beautiful .notice__effect { color: var(--beautiful-2); }
+.notice--team.notice--a    .notice__effect { color: var(--team-a-2); }
+.notice--team.notice--b .notice__effect { color: var(--team-b-2); }
 .notice--like      .notice__effect { font-size: 112px; }
 
 /* カウントダウン中は、ダイヤルの下に FEVER 表示があって余白が無い。
-   通知はダイヤルの上へ逃がし、そのぶん「KAWAII HOLDING」の見出しを引っ込める
+   通知はダイヤルの上へ逃がし、そのぶん「... HOLDING」の見出しを引っ込める
    (誰がどちらを保持しているかはダイヤルの色とタワーで分かる)。 */
 .stage.counting .notice {
   transform: translateY(-300px) scale(0.62);

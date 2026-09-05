@@ -1,5 +1,5 @@
 /**
- * game.js - KAWAII vs BEAUTIFUL / core game logic
+ * game.js - core game logic for an "A versus B" match
  *
  * This file is intentionally free of DOM code, of rendering code and of
  * any TikTok specific code. It only knows about:
@@ -27,10 +27,19 @@
 (function (global) {
   'use strict';
 
-  /** Team identifiers. Use these constants instead of raw strings. */
+  /**
+   * Team identifiers.
+   *
+   * These are deliberately abstract: the engine plays "A versus B" and knows
+   * nothing about what the two sides represent. The current match-up
+   * (KAWAII vs BEAUTIFUL) lives in js/config.js as a theme, and swapping it
+   * must never require touching a rule in this file.
+   *
+   * Never compare against a display name. Compare against these ids.
+   */
   var TEAM = {
-    KAWAII: 'kawaii',
-    BEAUTIFUL: 'beautiful'
+    A: 'A',
+    B: 'B'
   };
 
   /** Round / match phases. */
@@ -56,7 +65,7 @@
   };
 
   function otherTeam(team) {
-    return team === TEAM.KAWAII ? TEAM.BEAUTIFUL : TEAM.KAWAII;
+    return team === TEAM.A ? TEAM.B : TEAM.A;
   }
 
   function clamp(value, min, max) {
@@ -118,11 +127,11 @@
     this.phase = PHASE.IDLE;
     this.round = 0;
     this.boards = {};
-    this.boards[TEAM.KAWAII] = 0;
-    this.boards[TEAM.BEAUTIFUL] = 0;
+    this.boards[TEAM.A] = 0;
+    this.boards[TEAM.B] = 0;
     this.score = {};
-    this.score[TEAM.KAWAII] = 0;
-    this.score[TEAM.BEAUTIFUL] = 0;
+    this.score[TEAM.A] = 0;
+    this.score[TEAM.B] = 0;
 
     this.countdown = null;   // { team, endsAt, remainingMs }
     this.roundWinner = null;
@@ -141,12 +150,12 @@
       phase: this.phase,
       round: this.round,
       boards: {
-        kawaii: this.boards[TEAM.KAWAII],
-        beautiful: this.boards[TEAM.BEAUTIFUL]
+        A: this.boards[TEAM.A],
+        B: this.boards[TEAM.B]
       },
       score: {
-        kawaii: this.score[TEAM.KAWAII],
-        beautiful: this.score[TEAM.BEAUTIFUL]
+        A: this.score[TEAM.A],
+        B: this.score[TEAM.B]
       },
       countdown: this.countdown
         ? { team: this.countdown.team, remainingMs: this.countdown.remainingMs }
@@ -170,8 +179,8 @@
 
   /** Resets the score and starts round 1. */
   GameEngine.prototype.startMatch = function () {
-    this.score[TEAM.KAWAII] = 0;
-    this.score[TEAM.BEAUTIFUL] = 0;
+    this.score[TEAM.A] = 0;
+    this.score[TEAM.B] = 0;
     this.round = 0;
     this.matchWinner = null;
     this.emit('match:start', this.getState());
@@ -184,8 +193,8 @@
     if (this.matchWinner) return this;
 
     this.round += 1;
-    this.boards[TEAM.KAWAII] = 0;
-    this.boards[TEAM.BEAUTIFUL] = 0;
+    this.boards[TEAM.A] = 0;
+    this.boards[TEAM.B] = 0;
     this.countdown = null;
     this.roundWinner = null;
     this._nextRoundAt = 0;
@@ -202,7 +211,7 @@
    * Adds boards to a team. This is the single entry point for every kind of
    * "gift" - test buttons, TikTok gifts, a replay file, anything.
    *
-   * @param {string} team   TEAM.KAWAII or TEAM.BEAUTIFUL
+   * @param {string} team   TEAM.A or TEAM.B
    * @param {number} amount number of boards (rounded down, must be > 0)
    * @param {object} [meta] free-form info about the source of the boards,
    *                        e.g. { source:'tiktok', user:'foo', gift:'Rose' }.
@@ -267,7 +276,7 @@
 
   GameEngine.prototype._acceptsInput = function (team, amount) {
     if (!this.isLive()) return false;
-    if (team !== TEAM.KAWAII && team !== TEAM.BEAUTIFUL) return false;
+    if (team !== TEAM.A && team !== TEAM.B) return false;
     return typeof amount === 'number' && isFinite(amount) && amount > 0;
   };
 
@@ -314,8 +323,8 @@
 
     // Nobody is counting down yet: the first team at or above the target
     // takes the lead. If both crossed within the same update, the bigger
-    // tower gets it (and KAWAII wins a perfect tie).
-    var candidates = [TEAM.KAWAII, TEAM.BEAUTIFUL].filter(function (team) {
+    // tower gets it (and team A wins a perfect tie).
+    var candidates = [TEAM.A, TEAM.B].filter(function (team) {
       return this.boards[team] >= target;
     }, this);
 
@@ -323,7 +332,7 @@
 
     var leader = candidates.length === 1
       ? candidates[0]
-      : (this.boards[TEAM.BEAUTIFUL] > this.boards[TEAM.KAWAII] ? TEAM.BEAUTIFUL : TEAM.KAWAII);
+      : (this.boards[TEAM.B] > this.boards[TEAM.A] ? TEAM.B : TEAM.A);
 
     this._startCountdown(leader);
   };
@@ -399,8 +408,8 @@
       team: team,
       round: this.round,
       score: {
-        kawaii: this.score[TEAM.KAWAII],
-        beautiful: this.score[TEAM.BEAUTIFUL]
+        A: this.score[TEAM.A],
+        B: this.score[TEAM.B]
       }
     });
 
@@ -424,8 +433,8 @@
     this.emit('match:win', {
       team: team,
       score: {
-        kawaii: this.score[TEAM.KAWAII],
-        beautiful: this.score[TEAM.BEAUTIFUL]
+        A: this.score[TEAM.A],
+        B: this.score[TEAM.B]
       }
     });
     this._emitState();

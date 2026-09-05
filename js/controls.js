@@ -14,22 +14,22 @@
 
   /** key -> [action, team, amount] */
   var KEY_MAP = {
-    q: ['add', TEAM.KAWAII, 1],
-    w: ['add', TEAM.KAWAII, 10],
-    e: ['add', TEAM.KAWAII, 50],
-    a: ['attack', TEAM.KAWAII, 10],
-    i: ['add', TEAM.BEAUTIFUL, 1],
-    o: ['add', TEAM.BEAUTIFUL, 10],
-    p: ['add', TEAM.BEAUTIFUL, 50],
-    l: ['attack', TEAM.BEAUTIFUL, 10],
+    q: ['add', TEAM.A, 1],
+    w: ['add', TEAM.A, 10],
+    e: ['add', TEAM.A, 50],
+    a: ['attack', TEAM.A, 10],
+    i: ['add', TEAM.B, 1],
+    o: ['add', TEAM.B, 10],
+    p: ['add', TEAM.B, 50],
+    l: ['attack', TEAM.B, 10],
     r: ['reset-round'],
     m: ['reset-match']
   };
 
   /** TikTok イベント再現用のキー。押し手はランダムに選ばれます。 */
   var TIKTOK_KEY_MAP = {
-    '1': ['comment', { text: 'A' }],
-    '2': ['comment', { text: 'B' }],
+    '1': ['comment', { side: 'A' }],        // team A の合言葉 (テーマから取る)
+    '2': ['comment', { side: 'B' }],
     g:   ['gift',    { giftId: 5658, diamonds: 20 }],    // Perfume
     x:   ['gift',    { giftId: 59314, diamonds: 10 }],   // Banana Peel = 攻撃
     k:   ['like',    { count: 20 }],
@@ -53,6 +53,13 @@
     this._bindKeyboard();
     this._applyObsFlag();
   }
+
+  /** テーマの合言葉。テーマを差し替えてもテストパネルが追随する。 */
+  Controls.prototype.keyword = function (side) {
+    var theme = (global.KVB.CONFIG || {}).theme;
+    if (!theme) return side;
+    return (side === 'B' ? theme.teamB : theme.teamA).keyword;
+  };
 
   /**
    * TikTok から来たことにしてイベントを 1 件流す。
@@ -82,7 +89,7 @@
         return this.router.dispatch(this.liveId, { type: 'follow', user: user });
       case 'comment':
         return this.router.dispatch(this.liveId, {
-          type: 'chat', user: user, text: opts.text || 'A'
+          type: 'chat', user: user, text: opts.text || this.keyword(opts.side || 'A')
         });
       default:
         return null;
@@ -137,6 +144,7 @@
       if (tiktokButton) {
         self.simulate(tiktokButton.dataset.tiktok, {
           user: tiktokButton.dataset.user,
+          side: tiktokButton.dataset.side,
           giftId: tiktokButton.dataset.giftId,
           diamonds: tiktokButton.dataset.diamonds,
           count: tiktokButton.dataset.count,

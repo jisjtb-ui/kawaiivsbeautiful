@@ -104,8 +104,8 @@ test('liveId ごとに別のセッションへ振り分けられる', () => {
   a.router.dispatch('live-1', { type: 'gift', user: { uniqueId: 'taro' }, giftId: 11046, diamondCount: 1000 });
   a.router.dispatch('live-2', { type: 'gift', user: { uniqueId: 'hanako' }, giftId: 5655, diamondCount: 1 });
 
-  assert.strictEqual(a.engine.getState().boards.kawaii, 1000);
-  assert.strictEqual(b.engine.getState().boards.kawaii, 1);
+  assert.strictEqual(a.engine.getState().boards.A, 1000);
+  assert.strictEqual(b.engine.getState().boards.A, 1);
 });
 
 test('宛先セッションが無いイベントは捨てられ、例外にならない', () => {

@@ -13,31 +13,48 @@
   var CONFIG = {
 
     /**
-     * コメントの「A」「B」がどちらのチームに対応するか。
-     * 値は game.js の TEAM と同じ文字列にしてください。
+     * 対戦テーマ。**ここだけを書き換えれば別の対戦に差し替えられます。**
+     *
+     *   A / B          … システム共通のチーム ID。ゲームロジックはこれしか見ません
+     *   displayName    … 画面に出す名前。今回のテーマ
+     *   keyword        … 視聴者がコメントして参加するときの合言葉
+     *
+     * 例えば次のように書き換えれば、ゲームロジックを 1 行も触らずに
+     * 別の対戦になります。
+     *
+     *   title: 'MRBEAST VS ISHOWSPEED',
+     *   teamA: { id:'A', displayName:'MRBEAST',   keyword:'mrbeast'   , ... },
+     *   teamB: { id:'B', displayName:'ISHOWSPEED', keyword:'ishowspeed', ... }
+     *
+     * ゲームロジックの中で 'KAWAII' / 'BEAUTIFUL' という文字列を
+     * 判定に使ってはいけません。判定は必ず id ('A' / 'B') で行います。
      */
-    teams: {
-      a: 'kawaii',
-      b: 'beautiful',
+    theme: {
+      title: 'KAWAII VS BEAUTIFUL',
 
-      /**
-       * チーム振り分けの通知に出す表示名。
-       * 視聴者が打つ「A」「B」とそのまま対応させています。
-       * タワーの見出しに合わせたければ 'KAWAII' / 'BEAUTIFUL' に変えてください。
-       */
-      labelA: 'A TEAM',
-      labelB: 'B TEAM'
-    },
+      teamA: {
+        id: 'A',
+        displayName: 'KAWAII',
+        /** この言葉を完全一致でコメントすると参加できる (大文字小文字は無視)。 */
+        keyword: 'kawaii',
+        /** keyword の別名。['a'] を足せば「A」でも参加できるようになります。 */
+        aliases: [],
+        /** テーマカラー。起動時に CSS 変数へ流し込まれます。 */
+        colors: { base: '#ff4f9d', light: '#ff9ecb', dark: '#7a0b3d' },
+        /** 将来用。アイコン / 画像を差し替えたいときにここへ URL を入れます。 */
+        icon: null,
+        image: null
+      },
 
-    /**
-     * チーム選択に使うコメント。前後の空白を除いた「完全一致」で判定します。
-     * 全角のＡ/Ｂ、小文字の a/b も拾います。
-     * 部分一致にすると「Aさんかわいい」のような普通のコメントまで
-     * チーム選択として拾ってしまうため、完全一致にしています。
-     */
-    comment: {
-      a: ['a', 'ａ'],
-      b: ['b', 'ｂ']
+      teamB: {
+        id: 'B',
+        displayName: 'BEAUTIFUL',
+        keyword: 'beautiful',
+        aliases: [],
+        colors: { base: '#26d7ff', light: '#9be9ff', dark: '#06405a' },
+        icon: null,
+        image: null
+      }
     },
 
     likes: {
@@ -164,13 +181,15 @@
     },
 
     /**
-     * true ならラウンドが変わるたびにチーム所属と LIKE の貯金をリセットします。
-     * (「一度所属したらそのラウンド中は変更不可」という仕様に対応)
+     * チーム所属は **LIVE セッション単位**です。ラウンドが変わっても維持され、
+     * 一度所属したユーザーはその LIVE が終わるまでチームを変更できません。
      *
-     * 所属が決まるのは "A" / "B" のコメントだけです。ギフトやいいねでは所属しません
+     * 次の LIVE のために消すときは session.endSession() を呼びます。
+     *
+     * 所属が決まるのは合言葉のコメントだけです。ギフトやいいねでは所属しません
      * (未所属のまま送られた効果は 1 件ごとに抽選して A / B へ振り分けます)。
      */
-    resetTeamsEachRound: true
+    resetTeamsOnRound: false
   };
 
   global.KVB = global.KVB || {};

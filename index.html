@@ -15,20 +15,20 @@
 <div id="stage-wrap">
   <div id="stage" class="stage">
 
-    <div class="bg-glow bg-glow--kawaii"></div>
-    <div class="bg-glow bg-glow--beautiful"></div>
+    <div class="bg-glow bg-glow--a"></div>
+    <div class="bg-glow bg-glow--b"></div>
     <div class="bg-grid"></div>
 
     <!-- top : scoreboard -->
     <header class="scoreboard">
-      <div class="scoreboard__side scoreboard__side--kawaii">
-        <span class="scoreboard__name">KAWAII</span>
-        <span class="scoreboard__score" id="score-kawaii">0</span>
+      <div class="scoreboard__side scoreboard__side--a">
+        <span class="scoreboard__name" id="name-a"></span>
+        <span class="scoreboard__score" id="score-a">0</span>
       </div>
       <div class="scoreboard__sep">-</div>
-      <div class="scoreboard__side scoreboard__side--beautiful">
-        <span class="scoreboard__score" id="score-beautiful">0</span>
-        <span class="scoreboard__name">BEAUTIFUL</span>
+      <div class="scoreboard__side scoreboard__side--b">
+        <span class="scoreboard__score" id="score-b">0</span>
+        <span class="scoreboard__name" id="name-b"></span>
       </div>
       <div class="scoreboard__round">ROUND <b id="round-number">1</b> <span class="scoreboard__first-to">FIRST TO <b id="rounds-to-win">10</b></span></div>
     </header>
@@ -36,30 +36,30 @@
     <!-- middle : towers + VS -->
     <main class="arena">
 
-      <!-- KAWAII -->
-      <section class="team team--kawaii" id="team-kawaii">
+      <!-- team A -->
+      <section class="team team--a" id="team-a">
         <div class="tower">
           <div class="tower__frame">
             <div class="tower__target-line"><span>1000</span></div>
-            <div class="tower__fill" id="fill-kawaii">
+            <div class="tower__fill" id="fill-a">
               <div class="tower__cap"></div>
             </div>
-            <div class="tower__floaters" id="floaters-kawaii"></div>
+            <div class="tower__floaters" id="floaters-a"></div>
           </div>
           <div class="tower__base"></div>
         </div>
-        <div class="team__label">KAWAII</div>
+        <div class="team__label" id="label-a"></div>
         <div class="team__count">
-          <span class="team__count-value" id="count-kawaii">0</span>
+          <span class="team__count-value" id="count-a">0</span>
         </div>
       </section>
 
       <!-- center -->
       <section class="center">
         <div class="center__title">
-          <span class="center__word center__word--kawaii">KAWAII</span>
+          <span class="center__word center__word--a" id="title-a"></span>
           <span class="center__vs">VS</span>
-          <span class="center__word center__word--beautiful">BEAUTIFUL</span>
+          <span class="center__word center__word--b" id="title-b"></span>
         </div>
 
         <!-- 一時通知: 常時ではなく、重要イベントのときだけ 1 件出して消える -->
@@ -70,7 +70,7 @@
         </div>
 
         <div class="countdown" id="countdown" aria-hidden="true">
-          <div class="countdown__label" id="countdown-label">KAWAII HOLDING</div>
+          <div class="countdown__label" id="countdown-label"></div>
           <div class="countdown__dial">
             <svg class="countdown__ring" viewBox="0 0 200 200">
               <circle class="countdown__ring-bg" cx="100" cy="100" r="92"></circle>
@@ -81,21 +81,21 @@
         </div>
       </section>
 
-      <!-- BEAUTIFUL -->
-      <section class="team team--beautiful" id="team-beautiful">
+      <!-- team B -->
+      <section class="team team--b" id="team-b">
         <div class="tower">
           <div class="tower__frame">
             <div class="tower__target-line"><span>1000</span></div>
-            <div class="tower__fill" id="fill-beautiful">
+            <div class="tower__fill" id="fill-b">
               <div class="tower__cap"></div>
             </div>
-            <div class="tower__floaters" id="floaters-beautiful"></div>
+            <div class="tower__floaters" id="floaters-b"></div>
           </div>
           <div class="tower__base"></div>
         </div>
-        <div class="team__label">BEAUTIFUL</div>
+        <div class="team__label" id="label-b"></div>
         <div class="team__count">
-          <span class="team__count-value" id="count-beautiful">0</span>
+          <span class="team__count-value" id="count-b">0</span>
         </div>
       </section>
 
@@ -132,8 +132,8 @@
     <!-- TikTok から来るイベントをそのまま再現する。押すと EventRouter へ入る。 -->
     <div class="controls__group controls__group--tiktok">
       <h3>TIKTOK EVENTS <small>@taro</small></h3>
-      <button type="button" class="btn btn--kawaii"    data-tiktok="comment" data-user="taro" data-text="A">COMMENT &ldquo;A&rdquo; <small>join KAWAII</small></button>
-      <button type="button" class="btn btn--beautiful" data-tiktok="comment" data-user="taro" data-text="B">COMMENT &ldquo;B&rdquo; <small>join BEAUTIFUL</small></button>
+      <button type="button" class="btn btn--a"    data-tiktok="comment" data-user="taro" data-side="A">COMMENT &ldquo;kawaii&rdquo; <small>join A</small></button>
+      <button type="button" class="btn btn--b" data-tiktok="comment" data-user="taro" data-side="B">COMMENT &ldquo;beautiful&rdquo; <small>join B</small></button>
       <button type="button" class="btn btn--gift"      data-tiktok="gift" data-user="taro" data-gift-id="5655" data-diamonds="1">GIFT Rose <small>1 diamond</small></button>
       <button type="button" class="btn btn--gift"      data-tiktok="gift" data-user="taro" data-gift-id="5658" data-diamonds="20">GIFT Perfume <small>20 diamond</small></button>
       <button type="button" class="btn btn--attack"    data-tiktok="gift" data-user="taro" data-gift-id="59314" data-diamonds="10">ATTACK Banana Peel <small>-10 相手</small></button>
@@ -144,8 +144,8 @@
 
     <div class="controls__group controls__group--tiktok">
       <h3>TIKTOK EVENTS <small>others</small></h3>
-      <button type="button" class="btn btn--kawaii"    data-tiktok="comment" data-user="hanako" data-text="A">@hanako &ldquo;A&rdquo;</button>
-      <button type="button" class="btn btn--beautiful" data-tiktok="comment" data-user="ken" data-text="B">@ken &ldquo;B&rdquo;</button>
+      <button type="button" class="btn btn--a"    data-tiktok="comment" data-user="hanako" data-side="A">@hanako &ldquo;kawaii&rdquo;</button>
+      <button type="button" class="btn btn--b" data-tiktok="comment" data-user="ken" data-side="B">@ken &ldquo;beautiful&rdquo;</button>
       <button type="button" class="btn btn--gift"      data-tiktok="gift" data-user="hanako" data-gift-id="5658" data-diamonds="20">@hanako GIFT <small>20 diamond</small></button>
       <button type="button" class="btn btn--attack"    data-tiktok="gift" data-user="ken" data-gift-id="59314" data-diamonds="10">@ken ATTACK <small>Banana Peel</small></button>
       <button type="button" class="btn btn--like"      data-tiktok="like" data-user="ken" data-count="100">@ken LIKE +100</button>
@@ -154,36 +154,36 @@
       <button type="button" class="btn btn--ghost"     data-action="burst">BURST <small>15 events</small></button>
     </div>
 
-    <div class="controls__group controls__group--kawaii">
-      <h3>KAWAII</h3>
-      <button type="button" class="btn btn--kawaii" data-action="add" data-team="kawaii" data-amount="1">KAWAII +1</button>
-      <button type="button" class="btn btn--kawaii" data-action="add" data-team="kawaii" data-amount="10">KAWAII +10</button>
-      <button type="button" class="btn btn--kawaii" data-action="add" data-team="kawaii" data-amount="50">KAWAII +50</button>
-      <button type="button" class="btn btn--attack" data-action="attack" data-team="kawaii" data-amount="10">KAWAII ATTACK <small>-10 BEAUTIFUL</small></button>
+    <div class="controls__group controls__group--a">
+      <h3>TEAM A</h3>
+      <button type="button" class="btn btn--a" data-action="add" data-team="A" data-amount="1">A +1</button>
+      <button type="button" class="btn btn--a" data-action="add" data-team="A" data-amount="10">A +10</button>
+      <button type="button" class="btn btn--a" data-action="add" data-team="A" data-amount="50">A +50</button>
+      <button type="button" class="btn btn--attack" data-action="attack" data-team="A" data-amount="10">A ATTACK <small>-10 B</small></button>
     </div>
 
-    <div class="controls__group controls__group--beautiful">
-      <h3>BEAUTIFUL</h3>
-      <button type="button" class="btn btn--beautiful" data-action="add" data-team="beautiful" data-amount="1">BEAUTIFUL +1</button>
-      <button type="button" class="btn btn--beautiful" data-action="add" data-team="beautiful" data-amount="10">BEAUTIFUL +10</button>
-      <button type="button" class="btn btn--beautiful" data-action="add" data-team="beautiful" data-amount="50">BEAUTIFUL +50</button>
-      <button type="button" class="btn btn--attack" data-action="attack" data-team="beautiful" data-amount="10">BEAUTIFUL ATTACK <small>-10 KAWAII</small></button>
+    <div class="controls__group controls__group--b">
+      <h3>TEAM B</h3>
+      <button type="button" class="btn btn--b" data-action="add" data-team="B" data-amount="1">B +1</button>
+      <button type="button" class="btn btn--b" data-action="add" data-team="B" data-amount="10">B +10</button>
+      <button type="button" class="btn btn--b" data-action="add" data-team="B" data-amount="50">B +50</button>
+      <button type="button" class="btn btn--attack" data-action="attack" data-team="B" data-amount="10">B ATTACK <small>-10 A</small></button>
     </div>
 
     <div class="controls__group controls__group--system">
       <h3>SYSTEM</h3>
       <button type="button" class="btn btn--ghost" data-action="reset-round">RESET ROUND</button>
       <button type="button" class="btn btn--ghost" data-action="reset-match">RESET MATCH</button>
-      <button type="button" class="btn btn--ghost" data-action="add" data-team="kawaii" data-amount="1000">KAWAII +1000 <small>(demo)</small></button>
-      <button type="button" class="btn btn--ghost" data-action="add" data-team="beautiful" data-amount="1000">BEAUTIFUL +1000 <small>(demo)</small></button>
+      <button type="button" class="btn btn--ghost" data-action="add" data-team="A" data-amount="1000">A +1000 <small>(demo)</small></button>
+      <button type="button" class="btn btn--ghost" data-action="add" data-team="B" data-amount="1000">B +1000 <small>(demo)</small></button>
     </div>
   </div>
 
   <p class="controls__hint">
-    TikTok: <b>1</b>/<b>2</b> comment A/B &middot; <b>G</b> gift &middot; <b>X</b> attack (Banana Peel) &middot;
+    TikTok: <b>1</b>/<b>2</b> comment kawaii/beautiful &middot; <b>G</b> gift &middot; <b>X</b> attack (Banana Peel) &middot;
     <b>K</b> like +20 &middot; <b>F</b> follow (FEVER) &middot; <b>B</b> burst<br>
-    Engine: <b>Q/W/E</b> KAWAII +1/+10/+50 &middot; <b>A</b> KAWAII ATTACK &middot;
-    <b>I/O/P</b> BEAUTIFUL +1/+10/+50 &middot; <b>L</b> BEAUTIFUL ATTACK &middot;
+    Engine: <b>Q/W/E</b> A +1/+10/+50 &middot; <b>A</b> A ATTACK &middot;
+    <b>I/O/P</b> B +1/+10/+50 &middot; <b>L</b> B ATTACK &middot;
     <b>R</b> reset round &middot; <b>M</b> reset match &middot; <b>H</b> hide panel
   </p>
 </div>

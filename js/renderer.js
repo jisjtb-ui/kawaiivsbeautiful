@@ -19,14 +19,6 @@
   var BANNER_MAX_WIDTH = 1700;
   var BANNER_MAX_HEIGHT = 420;
 
-  var TEAM_LABEL = {};
-  TEAM_LABEL[TEAM.KAWAII] = 'KAWAII';
-  TEAM_LABEL[TEAM.BEAUTIFUL] = 'BEAUTIFUL';
-
-  var CONFETTI_COLORS = {};
-  CONFETTI_COLORS[TEAM.KAWAII] = ['#ff4f9d', '#ff9ecb', '#ffffff', '#ffd6e9'];
-  CONFETTI_COLORS[TEAM.BEAUTIFUL] = ['#26d7ff', '#9be9ff', '#ffffff', '#c9f4ff'];
-
   function $(id) { return document.getElementById(id); }
 
   function Renderer(engine, options) {
@@ -34,18 +26,18 @@
     this.el = {
       stage: $('stage'),
       wrap: $('stage-wrap'),
-      scoreKawaii: $('score-kawaii'),
-      scoreBeautiful: $('score-beautiful'),
+      scoreA: $('score-a'),
+      scoreB: $('score-b'),
       roundNumber: $('round-number'),
       roundsToWin: $('rounds-to-win'),
-      countKawaii: $('count-kawaii'),
-      countBeautiful: $('count-beautiful'),
-      fillKawaii: $('fill-kawaii'),
-      fillBeautiful: $('fill-beautiful'),
-      teamKawaii: $('team-kawaii'),
-      teamBeautiful: $('team-beautiful'),
-      floatersKawaii: $('floaters-kawaii'),
-      floatersBeautiful: $('floaters-beautiful'),
+      countA: $('count-a'),
+      countB: $('count-b'),
+      fillA: $('fill-a'),
+      fillB: $('fill-b'),
+      teamA: $('team-a'),
+      teamB: $('team-b'),
+      floatersA: $('floaters-a'),
+      floatersB: $('floaters-b'),
       countdown: $('countdown'),
       countdownLabel: $('countdown-label'),
       countdownNumber: $('countdown-number'),
@@ -64,6 +56,9 @@
       feverTime: $('fever-time')
     };
 
+    // テーマ (表示名・色) は config から。ここに固定文字列は置かない。
+    this.theme = (options && options.theme) || (global.KVB.CONFIG && global.KVB.CONFIG.theme);
+
     this.noticeConfig = (options && options.notice) ||
       ((global.KVB.CONFIG && global.KVB.CONFIG.notice) || { durationMs: 1600, minVisibleMs: 700 });
 
@@ -78,10 +73,74 @@
     this._lastFeverSecond = null;
     this._lastBreak = null;
 
+    this._applyTheme();
     this._bindStageScaling();
     this._bindEngine();
     this.renderState(engine.getState());
   }
+
+  // --------------------------------------------------------------- theme
+
+  /**
+   * テーマを画面へ流し込む。
+   *
+   * 表示名も配色もここでしか読みません。config.theme を書き換えれば
+   * KAWAII VS BEAUTIFUL から MRBEAST VS ISHOWSPEED へ差し替えられます。
+   */
+  Renderer.prototype._applyTheme = function () {
+    var theme = this.theme;
+    if (!theme) return;
+
+    var root = document.documentElement;
+    [['a', theme.teamA], ['b', theme.teamB]].forEach(function (pair) {
+      var slot = pair[0];
+      var side = pair[1];
+      var name = side.displayName;
+
+      ['name-', 'label-', 'title-'].forEach(function (prefix) {
+        var el = $(prefix + slot);
+        if (el) el.textContent = name;
+      });
+
+      var colors = side.colors || {};
+      if (colors.base)  root.style.setProperty('--team-' + slot + '-1', colors.base);
+      if (colors.light) root.style.setProperty('--team-' + slot + '-2', colors.light);
+      if (colors.dark)  root.style.setProperty('--team-' + slot + '-3', colors.dark);
+    });
+
+    if (theme.title) document.title = theme.title;
+  };
+
+  /** チーム ID -> 画面に出す名前。 */
+  Renderer.prototype.label = function (team) {
+    var side = this._side(team);
+    return side ? side.displayName : team;
+  };
+
+  Renderer.prototype._side = function (team) {
+    if (!this.theme) return null;
+    return team === this.theme.teamA.id ? this.theme.teamA : this.theme.teamB;
+  };
+
+  /**
+   * チーム ID -> CSS のスロット名 'a' / 'b'。
+   * CSS のクラス名は小文字固定なので、ID をそのまま使わずここで変換する。
+   */
+  Renderer.prototype.slot = function (team) {
+    return (!this.theme || team === this.theme.teamA.id) ? 'a' : 'b';
+  };
+
+  /** チーム ID -> そのチームの DOM 要素。'A' なら ...A、それ以外は ...B。 */
+  Renderer.prototype._el = function (team, name) {
+    var isA = !this.theme || team === this.theme.teamA.id;
+    return this.el[name + (isA ? 'A' : 'B')];
+  };
+
+  Renderer.prototype._confetti = function (team) {
+    var side = this._side(team);
+    var colors = (side && side.colors) || {};
+    return [colors.base || '#ffffff', colors.light || '#ffffff', '#ffffff', colors.light || '#ffffff'];
+  };
 
   // ------------------------------------------------------- stage scaling
 
@@ -139,29 +198,29 @@
       }
 
       self._lastBreak = null;
-      self.showBanner('BOARD BREAK', TEAM_LABEL[data.team] + ' -' + data.amount,
+      self.showBanner('BOARD BREAK', self.label(data.team) + ' -' + data.amount,
         { variant: 'danger', duration: 900, priority: 1 });
     });
 
     engine.on('countdown:start', function (data) {
       self.el.stage.classList.add('counting');
       self.el.countdown.classList.add('is-on');
-      self.el.countdown.classList.remove('team-kawaii', 'team-beautiful');
-      self.el.countdown.classList.add('team-' + data.team);
-      self.el.countdownLabel.textContent = TEAM_LABEL[data.team] + ' HOLDING';
+      self.el.countdown.classList.remove('team-a', 'team-b');
+      self.el.countdown.classList.add('team-' + self.slot(data.team));
+      self.el.countdownLabel.textContent = self.label(data.team) + ' HOLDING';
       self._lastSecond = null;
 
       if (data.takenFrom) {
         // 受け渡し。直前に出た「COUNTDOWN CANCELLED」より強い優先度で上書きし、
         // 「止まった」ではなく「相手に移った」と読めるようにする。
-        self.showBanner(TEAM_LABEL[data.team] + ' TAKES OVER',
+        self.showBanner(self.label(data.team) + ' TAKES OVER',
           'HOLD ' + engine.config.holdSeconds + ' SECONDS',
-          { variant: data.team, duration: 1600, priority: 4 });
+          { variant: self.slot(data.team), duration: 1600, priority: 4 });
         self.fireFlash(false);
       } else {
-        self.showBanner(TEAM_LABEL[data.team] + ' ' + engine.config.targetBoards + '!',
+        self.showBanner(self.label(data.team) + ' ' + engine.config.targetBoards + '!',
           'HOLD ' + engine.config.holdSeconds + ' SECONDS',
-          { variant: data.team, duration: 1200, priority: 2 });
+          { variant: self.slot(data.team), duration: 1200, priority: 2 });
       }
     });
 
@@ -175,25 +234,25 @@
       // board:break -> countdown:cancel は同じ操作の中で続けて飛んでくる。
       var cause = self._lastBreak && (Date.now() - self._lastBreak.at) < 500 ? self._lastBreak : null;
       self.showBanner('COUNTDOWN CANCELLED',
-        cause ? '@' + cause.user + ' -' + cause.amount : TEAM_LABEL[data.team] + ' ' + data.boards,
+        cause ? '@' + cause.user + ' -' + cause.amount : self.label(data.team) + ' ' + data.boards,
         { variant: 'danger', duration: 1500, priority: 3 });
       self.fireFlash(true);
     });
 
     engine.on('round:win', function (data) {
       self.hideCountdown();
-      self.showBanner(TEAM_LABEL[data.team] + ' WIN ROUND',
-        data.score.kawaii + ' - ' + data.score.beautiful,
-        { variant: data.team, duration: 3400, priority: 8 });
+      self.showBanner(self.label(data.team) + ' WIN ROUND',
+        data.score.A + ' - ' + data.score.B,
+        { variant: self.slot(data.team), duration: 3400, priority: 8 });
       self.fireFlash(false);
       self.burstConfetti(data.team);
       self.bumpScore(data.team);
     });
 
     engine.on('match:win', function (data) {
-      self.showBanner(TEAM_LABEL[data.team] + ' WIN MATCH',
-        'FINAL ' + data.score.kawaii + ' - ' + data.score.beautiful,
-        { variant: data.team, duration: 0, priority: 10 });
+      self.showBanner(self.label(data.team) + ' WIN MATCH',
+        'FINAL ' + data.score.A + ' - ' + data.score.B,
+        { variant: self.slot(data.team), duration: 0, priority: 10 });
       self.burstConfetti(data.team, 160);
     });
 
@@ -208,19 +267,19 @@
   Renderer.prototype.renderState = function (state) {
     var target = state.config.targetBoards;
 
-    this.el.scoreKawaii.textContent = state.score.kawaii;
-    this.el.scoreBeautiful.textContent = state.score.beautiful;
+    this.el.scoreA.textContent = state.score.A;
+    this.el.scoreB.textContent = state.score.B;
     this.el.roundNumber.textContent = state.round || 1;
     this.el.roundsToWin.textContent = state.config.roundsToWinMatch;
 
-    this.el.countKawaii.textContent = state.boards.kawaii;
-    this.el.countBeautiful.textContent = state.boards.beautiful;
+    this.el.countA.textContent = state.boards.A;
+    this.el.countB.textContent = state.boards.B;
 
-    this._renderTower(this.el.fillKawaii, this.el.teamKawaii, state.boards.kawaii, target);
-    this._renderTower(this.el.fillBeautiful, this.el.teamBeautiful, state.boards.beautiful, target);
+    this._renderTower(this.el.fillA, this.el.teamA, state.boards.A, target);
+    this._renderTower(this.el.fillB, this.el.teamB, state.boards.B, target);
 
-    this.el.stage.classList.toggle('lead-kawaii', state.boards.kawaii > state.boards.beautiful);
-    this.el.stage.classList.toggle('lead-beautiful', state.boards.beautiful > state.boards.kawaii);
+    this.el.stage.classList.toggle('lead-a', state.boards.A > state.boards.B);
+    this.el.stage.classList.toggle('lead-b', state.boards.B > state.boards.A);
 
     if (!state.countdown) this.hideCountdown();
   };
@@ -302,7 +361,7 @@
 
     // クラスを付け直して、毎回ポップのアニメーションを最初から再生させる
     var className = 'notice notice--' + (notice.kind || 'gift');
-    if (notice.team) className += ' notice--' + notice.team;
+    if (notice.team) className += ' notice--' + this.slot(notice.team);
     el.notice.className = className;
     void el.notice.offsetWidth;
     el.notice.classList.add('is-on');
@@ -393,7 +452,7 @@
   };
 
   /**
-   * Headlines vary a lot in length ("ROUND 3" vs "BEAUTIFUL WIN MATCH") and
+   * Headlines vary a lot in length ("ROUND 3" vs a long team name plus "WIN MATCH") and
    * the font differs between machines, so shrink until the line fits the stage.
    */
   Renderer.prototype._fitBannerText = function () {
@@ -408,7 +467,7 @@
   };
 
   Renderer.prototype.spawnFloater = function (team, text, kind) {
-    var host = team === TEAM.KAWAII ? this.el.floatersKawaii : this.el.floatersBeautiful;
+    var host = this._el(team, 'floaters');
     var node = document.createElement('div');
     node.className = 'floater floater--' + kind;
     node.textContent = text;
@@ -418,14 +477,14 @@
   };
 
   Renderer.prototype.pulseCount = function (team, hurt) {
-    var el = team === TEAM.KAWAII ? this.el.countKawaii : this.el.countBeautiful;
+    var el = this._el(team, 'count');
     el.classList.add('pop');
     if (hurt) el.classList.add('hurt');
     setTimeout(function () { el.classList.remove('pop', 'hurt'); }, 220);
   };
 
   Renderer.prototype.shakeTeam = function (team) {
-    var el = team === TEAM.KAWAII ? this.el.teamKawaii : this.el.teamBeautiful;
+    var el = this._el(team, 'team');
     el.classList.remove('shake');
     void el.offsetWidth;
     el.classList.add('shake');
@@ -433,7 +492,7 @@
   };
 
   Renderer.prototype.bumpScore = function (team) {
-    var el = team === TEAM.KAWAII ? this.el.scoreKawaii : this.el.scoreBeautiful;
+    var el = this._el(team, 'score');
     el.classList.remove('bump');
     void el.offsetWidth;
     el.classList.add('bump');
@@ -447,7 +506,7 @@
   };
 
   Renderer.prototype.burstConfetti = function (team, count) {
-    var colors = CONFETTI_COLORS[team] || CONFETTI_COLORS[TEAM.KAWAII];
+    var colors = this._confetti(team);
     var total = count || 90;
     var host = this.el.confetti;
 
