@@ -152,7 +152,7 @@
   <div class="controls__grid">
     <!-- TikTok から来るイベントをそのまま再現する。押すと EventRouter へ入る。 -->
     <div class="controls__group controls__group--tiktok">
-      <h3>TIKTOK EVENTS <small>@taro</small></h3>
+      <h3>TIKTOK EVENTS <small>@taro &middot; ルール適用 (FEVER 倍率あり)</small></h3>
       <button type="button" class="btn btn--a"    data-tiktok="comment" data-user="taro" data-side="A">COMMENT &ldquo;kawaii&rdquo; <small>join A</small></button>
       <button type="button" class="btn btn--b" data-tiktok="comment" data-user="taro" data-side="B">COMMENT &ldquo;beautiful&rdquo; <small>join B</small></button>
       <button type="button" class="btn btn--gift"      data-tiktok="gift" data-user="taro" data-gift-id="5655" data-diamonds="1">GIFT Rose <small>1 diamond</small></button>
@@ -164,7 +164,7 @@
     </div>
 
     <div class="controls__group controls__group--tiktok">
-      <h3>TIKTOK EVENTS <small>others</small></h3>
+      <h3>TIKTOK EVENTS <small>others &middot; ルール適用</small></h3>
       <button type="button" class="btn btn--a"    data-tiktok="comment" data-user="hanako" data-side="A">@hanako &ldquo;kawaii&rdquo;</button>
       <button type="button" class="btn btn--b" data-tiktok="comment" data-user="ken" data-side="B">@ken &ldquo;beautiful&rdquo;</button>
       <button type="button" class="btn btn--gift"      data-tiktok="gift" data-user="hanako" data-gift-id="5658" data-diamonds="20">@hanako GIFT <small>20 diamond</small></button>
@@ -176,7 +176,7 @@
     </div>
 
     <div class="controls__group controls__group--a">
-      <h3>TEAM A</h3>
+      <h3>板を直接動かす <small>A &middot; ルール無視</small></h3>
       <button type="button" class="btn btn--a" data-action="add" data-team="A" data-amount="1">A +1</button>
       <button type="button" class="btn btn--a" data-action="add" data-team="A" data-amount="10">A +10</button>
       <button type="button" class="btn btn--a" data-action="add" data-team="A" data-amount="50">A +50</button>
@@ -184,7 +184,7 @@
     </div>
 
     <div class="controls__group controls__group--b">
-      <h3>TEAM B</h3>
+      <h3>板を直接動かす <small>B &middot; ルール無視</small></h3>
       <button type="button" class="btn btn--b" data-action="add" data-team="B" data-amount="1">B +1</button>
       <button type="button" class="btn btn--b" data-action="add" data-team="B" data-amount="10">B +10</button>
       <button type="button" class="btn btn--b" data-action="add" data-team="B" data-amount="50">B +50</button>
@@ -217,6 +217,13 @@
       <button type="button" class="btn btn--ghost" data-action="add" data-team="B" data-amount="1000">B +1000 <small>(demo)</small></button>
     </div>
   </div>
+
+  <p class="controls__note">
+    <b>TIKTOK EVENTS</b> は実配信とまったく同じ経路を通ります（チーム所属・FEVER 倍率・上限がすべて効きます）。<br>
+    <b>板を直接動かす</b> ボタンはエンジンを直接叩くので、<b>FEVER 倍率は掛かりません</b>。
+    「+50」は文字どおり板を 50 枚足す指示で、ポイントからの換算を経ないためです。
+    カウントダウンやラウンド進行だけを試したいときに使ってください。
+  </p>
 
   <p class="controls__hint">
     TikTok: <b>1</b>/<b>2</b> comment kawaii/beautiful &middot; <b>G</b> gift &middot; <b>X</b> attack (Banana Peel) &middot;

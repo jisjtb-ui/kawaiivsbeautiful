@@ -428,3 +428,43 @@ test('攻撃ギフトは設定で差し替えられる', () => {
   t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, BANANA)); // もう攻撃ではない
   assert.strictEqual(t.engine.getState().boards.A, 10);
 });
+
+
+// ---------------------------------------- FEVER 倍率がどこまで効くか
+
+test('FEVER 中、実配信と同じ経路なら GIFT も LIKE も倍になる', () => {
+  const t = setup();
+  const U = { id: '1', uniqueId: 'taro' };
+  t.send({ type: 'chat', user: U, comment: 'kawaii' });
+
+  const gift = () => t.send({ type: 'gift', user: U, giftId: 5658, diamondCount: 20 });
+  const like = () => t.send({ type: 'like', user: U, count: 100 });
+  const A = () => t.engine.getState().boards.A;
+
+  let before = A(); gift(); const giftPlain = A() - before;
+  before = A(); like(); const likePlain = A() - before;
+
+  t.send({ type: 'follow', user: { id: '9', uniqueId: 'x' } });
+  assert.strictEqual(t.session.getFever().active, true);
+
+  before = A(); gift(); const giftFever = A() - before;
+  before = A(); like(); const likeFever = A() - before;
+
+  assert.deepStrictEqual(
+    { giftPlain, giftFever, likePlain, likeFever },
+    { giftPlain: 20, giftFever: 40, likePlain: 1, likeFever: 2 },
+    'GIFT も LIKE も 2 倍になる'
+  );
+});
+
+test('engine.addBoards() を直接呼ぶ経路には FEVER 倍率が掛からない', () => {
+  const t = setup();
+  t.send({ type: 'follow', user: { id: '9', uniqueId: 'x' } });
+  assert.strictEqual(t.session.getFever().active, true);
+
+  // テストパネルの「板を直接動かす」ボタンと同じ呼び方。
+  // 枚数を直接指定する操作なので、ポイントからの換算に掛かる倍率は通らない。
+  const before = t.engine.getState().boards.A;
+  t.engine.addBoards('A', 50, { source: 'test-panel' });
+  assert.strictEqual(t.engine.getState().boards.A - before, 50);
+});
