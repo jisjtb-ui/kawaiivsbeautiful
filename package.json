@@ -5,7 +5,7 @@
   "description": "TikTok LIVE 連動ゲーム KAWAII vs BEAUTIFUL",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "check": "node --check js/game.js && node --check js/config.js && node --check js/event-router.js && node --check js/game-session.js && node --check js/renderer.js && node --check js/controls.js && node --check js/tiktok-adapter.js && node --check js/main.js",
+    "check": "node --check js/game.js && node --check js/config.js && node --check js/event-router.js && node --check js/game-session.js && node --check js/audio.js && node --check js/renderer.js && node --check js/controls.js && node --check js/tiktok-adapter.js && node --check js/main.js",
     "gifts": "node tools/fetch-gifts.js"
   },
   "license": "MIT"

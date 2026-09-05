@@ -160,6 +160,7 @@
       countdown: this.countdown
         ? { team: this.countdown.team, remainingMs: this.countdown.remainingMs }
         : null,
+      leadingTeam: this.leadingTeam(),
       roundWinner: this.roundWinner,
       matchWinner: this.matchWinner,
       config: this.config
@@ -168,6 +169,21 @@
 
   GameEngine.prototype._emitState = function () {
     this.emit('state', this.getState());
+  };
+
+  /**
+   * Which team is ahead on boards right now, or null when they are level.
+   *
+   * Derived state, not a rule: nothing in the engine branches on it. It
+   * exists so that presentation layers (the tower glow, the BGM) can react
+   * to a change of lead without each of them recomputing it — and so that
+   * "the lead changed" is testable without a browser.
+   */
+  GameEngine.prototype.leadingTeam = function () {
+    var a = this.boards[TEAM.A];
+    var b = this.boards[TEAM.B];
+    if (a === b) return null;
+    return a > b ? TEAM.A : TEAM.B;
   };
 
   /** True while boards may be added or removed. */

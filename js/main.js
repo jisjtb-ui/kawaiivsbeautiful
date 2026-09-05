@@ -40,6 +40,31 @@
 
     // --- 画面
     var renderer = new KVB.Renderer(engine, { notice: config.notice });
+
+    // --- BGM
+    //
+    // ゲームロジックは音を知りません。engine が出す leadingTeam を
+    // そのまま渡すだけで、いつ切り替えるかは AudioManager が決めます。
+    var audio = new KVB.AudioManager({
+      volume: config.audio.volume,
+      fadeMs: config.audio.fadeMs,
+      onNeedsGesture: function (needs) {
+        var badge = document.getElementById('muted');
+        if (badge) badge.hidden = !needs;
+      }
+    });
+
+    [['A', config.theme.teamA], ['B', config.theme.teamB]].forEach(function (pair) {
+      if (config.audio.enabled && pair[1].bgm) audio.setTrack(pair[0], pair[1].bgm);
+    });
+
+    if (config.audio.enabled) {
+      engine.on('state', function (state) { audio.setLeader(state.leadingTeam); });
+      // ブラウザに自動再生を止められている場合、最初の操作で鳴らし始める
+      ['click', 'keydown', 'touchstart'].forEach(function (name) {
+        global.addEventListener(name, function () { audio.resume(); }, { passive: true });
+      });
+    }
     var controls = new KVB.Controls(engine, { session: session, router: router, liveId: LIVE_ID });
     var tiktok = new KVB.TikTokAdapter(router, { liveId: LIVE_ID });
 
@@ -71,7 +96,42 @@
 
     // 何度でも試せるように、全部やり直す入口をひとつ用意しておく。
     // 画面の RESET MATCH ボタン / M キーと同じ動きで、チーム所属も消える。
+    global.KVB.audio = audio;
     global.KVB.reset = function () { return controls.resetAll(); };
+
+    // --- BGM の設定欄 (テストパネル内)
+    //
+    // 選んだファイルはこのページを開いている間だけ有効です。配信で使うなら
+    // config.theme.teamX.bgm にパスを書いておくほうが確実です。
+    [['A', 'bgm-file-a', 'bgm-name-a', config.theme.teamA],
+      ['B', 'bgm-file-b', 'bgm-name-b', config.theme.teamB]].forEach(function (row) {
+      var team = row[0];
+      var input = document.getElementById(row[1]);
+      var label = document.getElementById(row[2]);
+      if (label) label.textContent = row[3].displayName;
+      if (!input) return;
+
+      input.addEventListener('change', function () {
+        var file = input.files && input.files[0];
+        if (!file) return;
+        audio.setTrack(team, URL.createObjectURL(file), file.name);
+        var hint = document.getElementById('bgm-hint');
+        if (hint) hint.textContent = row[3].displayName + ': ' + file.name + ' を設定しました';
+      });
+    });
+
+    var volume = document.getElementById('bgm-volume');
+    if (volume) {
+      volume.value = String(Math.round(config.audio.volume * 100));
+      volume.addEventListener('input', function () {
+        audio.volume = Number(volume.value) / 100;
+        var playing = audio.current && audio.tracks[audio.current];
+        if (playing) playing.volume = audio.volume;
+      });
+    }
+
+    var stopBtn = document.getElementById('bgm-stop');
+    if (stopBtn) stopBtn.addEventListener('click', function () { audio.stop(); });
 
     // 全部を 1 本の時計で回す
     function loop() {

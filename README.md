@@ -31,7 +31,7 @@ TikTok LIVE 連動の対抗戦ゲーム。
 ルールのテスト:
 
 ```
-npm test        # 88 件。ブラウザ不要
+npm test        # 99 件。ブラウザ不要
 npm run gifts   # TikTok のギフト一覧を取得（後述）
 ```
 
@@ -157,7 +157,11 @@ npm run gifts   # TikTok のギフト一覧を取得（後述）
 | `theme.teamA.keyword` | `kawaii` | 参加の合言葉 |
 | `theme.teamA.aliases` | `[]` | 合言葉の別名。`['a']` を足せば `a` でも参加できる |
 | `theme.teamA.colors` | ピンク3色 | テーマカラー。起動時に CSS 変数へ流し込まれる |
+| `theme.teamA.bgm` | `null` | リード中に流す MP3（相対パス or URL） |
 | `theme.teamA.icon` / `image` | `null` | 将来用の差し替え口 |
+| `audio.volume` | `0.6` | BGM の音量 |
+| `audio.fadeMs` | `400` | 切り替えのフェード時間（0 で即切り替え） |
+| `audio.enabled` | `true` | `false` で BGM 機能を使わない |
 | `theme.teamB.*` | 同上 | 内部 ID は常に `B` |
 | `comment.a` / `comment.b` | `['a','ａ']` / `['b','ｂ']` | チーム参加とみなすコメント（完全一致） |
 | `likes.perBoard` | `100` | 何 LIKE で 1 区切りか |
@@ -208,7 +212,42 @@ JP の 689 種すべてが自動的に正しい価値になります。`byId` �
 
 ---
 
-### 4.1 テーマを差し替える
+### 4.1 BGM
+
+**リードしているチームの曲**がループで流れます。音だけで今どちらが勝っているか分かります。
+
+配信で使うなら `js/config.js` に書いておくのが確実です。
+
+```js
+teamA: { ..., bgm: 'bgm/kawaii.mp3' },
+teamB: { ..., bgm: 'bgm/beautiful.mp3' },
+```
+
+パスは `index.html` から見た相対位置です。上の例なら `bgm/` フォルダを作って
+その中に MP3 を置きます。
+
+その場で試すだけなら、テストパネル（`H` キー）の **BGM** 欄からファイルを選べます。
+こちらはページを開いている間だけ有効で、保存はされません。
+
+**切り替えの決まり:**
+
+| 状況 | 動き |
+| --- | --- |
+| リードが変わった | 前の曲をフェードアウトし、新しい曲を頭から再生 |
+| 同じチームがリードし続けている | **鳴らし直さない**（そのまま流し続ける） |
+| 同点になった | **今の曲をそのまま続ける** |
+| 曲が最後まで来た | 先頭に戻ってループ |
+| リード側の曲が未設定 | 何も鳴らさない |
+
+同点で止めない理由は、板が拮抗しているときに同点を何度も跨ぐためです。
+そのたびに止めると数秒おきに無音が挟まり、かえって落ち着きません。
+
+FEVER 中もリード側の曲を維持します（FEVER 専用 BGM はありません）。
+
+**ブラウザが自動再生を止めた場合**は、画面左上に `🔇 クリックで BGM を有効化` と出ます。
+画面のどこかをクリックすれば鳴り始めます。
+
+### 4.2 テーマを差し替える
 
 `js/config.js` の `theme` だけを書き換えます。**ゲームロジックは 1 行も触りません。**
 
@@ -221,6 +260,7 @@ theme: {
     keyword: 'mrbeast',
     aliases: [],
     colors: { base: '#ff7a29', light: '#ffc08a', dark: '#5c2600' },
+    bgm: 'bgm/mrbeast.mp3',
     icon: null, image: null
   },
   teamB: {
@@ -283,8 +323,9 @@ Event Router          js/event-router.js     TikTok の語彙をここで捨て�
 Game Session          js/game-session.js     チーム所属 / LIKE 累積 / FEVER
         ↓  team = 'A' | 'B'
 Game Logic            js/game.js             板・ラウンド・試合
-        ↓
-UI                    js/renderer.js         描くだけ (表示名は theme から)
+        ↓  leadingTeam
+UI / Audio            js/renderer.js         描くだけ (表示名は theme から)
+                      js/audio.js            リード中のチームの BGM を鳴らすだけ
 ```
 
 例: `COMMENT "kawaii"` → `TEAM_SELECT` → `team = 'A'` → UI が `theme.teamA.displayName`
@@ -322,6 +363,7 @@ css/style.css             # 見た目・アニメーション
 js/config.js              # ★設定値とテーマ (A/B の表示名・合言葉・色) はすべてここ
 js/game.js                # ゲームロジック（DOM も TikTok も知らない）
 js/game-session.js        # ★ルール層：チーム所属 / LIKE 累積 / FEVER
+js/audio.js               # リード中のチームの BGM（ゲームロジックから分離）
 js/event-router.js        # ★TikTok イベント → ゲームイベント + LIVE ごとの振り分け
 js/tiktok-adapter.js      # TikTok の受信口
 js/renderer.js            # 画面描画（engine とセッションの通知を読むだけ）

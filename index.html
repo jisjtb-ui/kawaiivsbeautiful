@@ -124,6 +124,9 @@
       </div>
     </div>
 
+    <!-- ブラウザが自動再生を止めているときだけ出る。クリックで解除される。 -->
+    <div class="muted" id="muted" hidden>&#128263; クリックで BGM を有効化</div>
+
     <!-- TikTok と繋がっていないときだけ出る小さな表示。
          繋がっていれば消えるので、配信中は視界に入らない。 -->
     <div class="link" id="link" hidden></div>
@@ -188,6 +191,24 @@
       <button type="button" class="btn btn--attack" data-action="attack" data-team="B" data-amount="10">B ATTACK <small>-10 A</small></button>
     </div>
 
+    <div class="controls__group controls__group--bgm">
+      <h3>BGM <small>(リード中のチームの曲)</small></h3>
+      <label class="bgm__row">
+        <span class="bgm__name" id="bgm-name-a">TEAM A</span>
+        <input type="file" accept="audio/*" id="bgm-file-a">
+      </label>
+      <label class="bgm__row">
+        <span class="bgm__name" id="bgm-name-b">TEAM B</span>
+        <input type="file" accept="audio/*" id="bgm-file-b">
+      </label>
+      <label class="bgm__row">
+        <span class="bgm__name">音量</span>
+        <input type="range" id="bgm-volume" min="0" max="100" value="60">
+      </label>
+      <button type="button" class="btn btn--ghost" id="bgm-stop">BGM 停止</button>
+      <p class="bgm__hint" id="bgm-hint">配信で使うなら js/config.js の theme.teamA.bgm にパスを書くと、毎回選ばずに済みます</p>
+    </div>
+
     <div class="controls__group controls__group--system">
       <h3>SYSTEM</h3>
       <button type="button" class="btn btn--ghost" data-action="reset-round">RESET ROUND</button>
@@ -210,6 +231,7 @@
 <script src="js/config.js"></script>
 <script src="js/game.js"></script>
 <script src="js/game-session.js"></script>
+<script src="js/audio.js"></script>
 <script src="js/event-router.js"></script>
 <script src="js/renderer.js"></script>
 <script src="js/controls.js"></script>

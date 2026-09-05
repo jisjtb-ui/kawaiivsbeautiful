@@ -41,6 +41,16 @@
         aliases: [],
         /** テーマカラー。起動時に CSS 変数へ流し込まれます。 */
         colors: { base: '#ff4f9d', light: '#ff9ecb', dark: '#7a0b3d' },
+        /**
+         * このチームがリードしているときに流す BGM。
+         * index.html から見た相対パス、または http:// の URL。
+         * 例: 'bgm/kawaii.mp3'
+         *
+         * 空でも構いません。画面の設定欄からその場で選ぶこともできます
+         * (そちらは開いている間だけ有効で、保存はされません)。
+         */
+        bgm: null,
+
         /** 将来用。アイコン / 画像を差し替えたいときにここへ URL を入れます。 */
         icon: null,
         image: null
@@ -52,9 +62,26 @@
         keyword: 'beautiful',
         aliases: [],
         colors: { base: '#26d7ff', light: '#9be9ff', dark: '#06405a' },
+        bgm: null,
         icon: null,
         image: null
       }
+    },
+
+    /**
+     * BGM の鳴らし方。
+     *
+     * リードしているチームの曲をループで流し、**リードが変わったときだけ**
+     * 切り替えます。板が動くたびに鳴らし直すと曲の頭が繰り返されるだけで、
+     * 「どちらが勝っているか」も伝わりません。
+     */
+    audio: {
+      /** 0.0 〜 1.0。 */
+      volume: 0.6,
+      /** 切り替えのフェード時間 (ミリ秒)。0 で即切り替え。 */
+      fadeMs: 400,
+      /** false にすると BGM 機能自体を使いません。 */
+      enabled: true
     },
 
     likes: {
