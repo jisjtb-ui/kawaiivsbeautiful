@@ -114,7 +114,10 @@
       if (colors.dark)  root.style.setProperty('--team-' + slot + '-3', colors.dark);
     });
 
-    if (theme.title) document.title = theme.title;
+    // タイトルが書かれていなければ「A VS B」を組み立てる。
+    // 表示名を変えるだけでタイトルも追随させるため。
+    var title = theme.title || (theme.teamA.displayName + ' VS ' + theme.teamB.displayName);
+    document.title = title;
   };
 
   /** チーム ID -> 画面に出す名前。 */

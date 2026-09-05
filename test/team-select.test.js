@@ -266,3 +266,42 @@ test('やり直しを何度繰り返しても状態が残らない', () => {
     assert.deepStrictEqual(t.engine.getState().boards, { A: 0, B: 0 });
   }
 });
+
+
+// -------------------------------------- 表示名 1 行でテーマが変わること
+
+test('displayName だけ変えれば、合言葉も自動で変わる', () => {
+  // keyword を書かない。config の既定と同じ状態。
+  const t = setup({ config: { theme: {
+    teamA: { displayName: 'MRBEAST', keyword: null },
+    teamB: { displayName: 'ISHOWSPEED', keyword: null }
+  } } });
+
+  t.send(comment(TARO, 'mrbeast'));
+  assert.strictEqual(t.session.teamOf(TARO), 'A', '表示名の小文字が合言葉になる');
+  assert.strictEqual(t.notices.at(-1).effect, 'MRBEAST');
+
+  t.send(comment(HANAKO, 'ISHOWSPEED'));
+  assert.strictEqual(t.session.teamOf(HANAKO), 'B', '大文字小文字は問わない');
+
+  // 前のテーマの合言葉は効かない
+  const other = setup({ config: { theme: { teamA: { displayName: 'MRBEAST', keyword: null } } } });
+  other.send(comment(TARO, 'kawaii'));
+  assert.strictEqual(other.session.teamOf(TARO), null);
+});
+
+test('既定のテーマでも合言葉は表示名から導かれている', () => {
+  const t = setup();
+  assert.strictEqual(t.session.teamKeyword(t.session.theme.teamA), 'kawaii');
+  assert.strictEqual(t.session.teamKeyword(t.session.theme.teamB), 'beautiful');
+});
+
+test('表示名と違う合言葉にしたいときは keyword で上書きできる', () => {
+  const t = setup({ config: { theme: {
+    teamA: { displayName: '大会Aチーム', keyword: 'a-team' }
+  } } });
+
+  t.send(comment(TARO, 'a-team'));
+  assert.strictEqual(t.session.teamOf(TARO), 'A');
+  assert.strictEqual(t.notices.at(-1).effect, '大会Aチーム');
+});

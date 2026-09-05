@@ -30,14 +30,26 @@
      * 判定に使ってはいけません。判定は必ず id ('A' / 'B') で行います。
      */
     theme: {
-      title: 'KAWAII VS BEAUTIFUL',
+      /**
+       * 中央のタイトルとタブ名。
+       * 省略すると「<A の名前> VS <B の名前>」が自動で使われます。
+       */
+      title: null,
 
       teamA: {
         id: 'A',
+        /**
+         * ここを変えれば、参加の合言葉もタイトルも通知も全部変わります。
+         * 変えるのは基本この 1 行だけです。
+         */
         displayName: 'KAWAII',
-        /** この言葉を完全一致でコメントすると参加できる (大文字小文字は無視)。 */
-        keyword: 'kawaii',
-        /** keyword の別名。['a'] を足せば「A」でも参加できるようになります。 */
+        /**
+         * 参加の合言葉。完全一致 (大文字小文字は無視)。
+         * **省略すると displayName の小文字**が使われます。
+         * 表示名と違う言葉で参加させたいときだけ書いてください。
+         */
+        keyword: null,
+        /** keyword の別名。['a'] を足せば「a」でも参加できるようになります。 */
         aliases: [],
         /** テーマカラー。起動時に CSS 変数へ流し込まれます。 */
         colors: { base: '#ff4f9d', light: '#ff9ecb', dark: '#7a0b3d' },
@@ -59,7 +71,7 @@
       teamB: {
         id: 'B',
         displayName: 'BEAUTIFUL',
-        keyword: 'beautiful',
+        keyword: null,
         aliases: [],
         colors: { base: '#26d7ff', light: '#9be9ff', dark: '#06405a' },
         bgm: null,

@@ -249,46 +249,67 @@ FEVER 中もリード側の曲を維持します（FEVER 専用 BGM はありま
 
 ### 4.2 テーマを差し替える
 
-`js/config.js` の `theme` だけを書き換えます。**ゲームロジックは 1 行も触りません。**
+**変えるのは表示名の 2 行だけです。**
 
 ```js
 theme: {
-  title: 'MRBEAST VS ISHOWSPEED',
-  teamA: {
-    id: 'A',                       // ← ID は固定。変えない
-    displayName: 'MRBEAST',
-    keyword: 'mrbeast',
-    aliases: [],
-    colors: { base: '#ff7a29', light: '#ffc08a', dark: '#5c2600' },
-    bgm: 'bgm/mrbeast.mp3',
-    icon: null, image: null
-  },
-  teamB: {
-    id: 'B',
-    displayName: 'ISHOWSPEED',
-    keyword: 'ishowspeed',
-    aliases: [],
-    colors: { base: '#7cff5a', light: '#c6ffb8', dark: '#1d4a10' },
-    icon: null, image: null
-  }
+  teamA: { ..., displayName: 'MRBEAST' },
+  teamB: { ..., displayName: 'ISHOWSPEED' }
 }
 ```
 
-これだけで、スコアボード・中央タイトル・タワーの見出し・振り分け通知・配色・
-参加の合言葉・ブラウザのタブ名がすべて入れ替わります。
-チーム ID は `A` / `B` のままなので、板・ラウンド・カウントダウン・FEVER・
-攻撃ギフトのルールは何も影響を受けません。
+これだけで次が全部入れ替わります。
 
-**守るべき分離:**
+| | 変わるもの |
+| --- | --- |
+| 中央のタイトル | `MRBEAST VS ISHOWSPEED`（`title` 未指定なら自動生成） |
+| スコアボード / タワーの見出し | `MRBEAST` `ISHOWSPEED` |
+| 振り分け通知 | `@Taro → MRBEAST` |
+| **参加の合言葉** | **`mrbeast` / `ishowspeed`**（`keyword` 未指定なら表示名の小文字） |
+| ブラウザのタブ名 | `MRBEAST VS ISHOWSPEED` |
+
+実測（表示名だけを書き換えた場合）:
+
+```
+変更前: tab="KAWAII VS BEAUTIFUL"  合言葉=["kawaii","beautiful"]
+変更後: tab="大会Aチーム VS 大会Bチーム"  合言葉=["大会aチーム","大会bチーム"]
+
+"大会aチーム" とコメント -> team = A / 通知 "大会Aチーム"
+```
+
+### 変えたいときだけ書く項目
+
+| 項目 | 省略したときの既定 |
+| --- | --- |
+| `title` | `<A の名前> VS <B の名前>` |
+| `keyword` | `displayName` の小文字 |
+| `aliases` | なし |
+| `colors` | 現在の配色のまま |
+| `bgm` / `icon` / `image` | なし |
+
+**表示名と違う合言葉にしたいとき**だけ `keyword` を書きます。日本語の表示名は
+スマホで打ちにくいので、そういうときに使ってください。
+
+```js
+teamA: { displayName: '大会Aチーム', keyword: 'a' },   // 「a」で参加できる
+```
+
+配色を変えるなら 3 色セットで指定します（`base` だけだと背景の光が前のまま）。
+
+```js
+colors: { base: '#ff7a29', light: '#ffc08a', dark: '#5c2600' },
+```
+
+### 守るべき分離
 
 | | 何 | どこ |
 | --- | --- | --- |
 | `A` / `B` | システム共通のチーム ID。**判定に使うのは常にこれ** | `js/game.js` の `TEAM` |
 | `KAWAII` / `BEAUTIFUL` | 今回のテーマの表示名 | `js/config.js` の `theme` |
 
-ゲームロジックの中で `'KAWAII'` のような表示名を条件に使わないでください。
-DOM の id と CSS のクラスも `-a` / `-b` のスロット名にしてあり、
-配色は `--team-a-*` / `--team-b-*` に起動時へ流し込まれます。
+**`id: 'A'` / `id: 'B'` は変えないでください。** ゲームロジックはこれしか見ておらず、
+表示名を条件に使っている箇所は 1 つもありません。DOM の id と CSS のクラスも
+`-a` / `-b` のスロット名で、配色は起動時に `--team-a-*` / `--team-b-*` へ流し込まれます。
 
 ---
 

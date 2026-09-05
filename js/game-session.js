@@ -179,6 +179,17 @@
     return team === this.teamA ? this.theme.teamA : this.theme.teamB;
   };
 
+  /**
+   * 参加の合言葉。
+   *
+   * keyword が書かれていなければ displayName の小文字を使います。
+   * こうしておくと、テーマを変えるときに書き換えるのは表示名 1 行だけで済みます
+   * (表示名と違う言葉にしたいときだけ keyword を書く)。
+   */
+  GameSession.prototype.teamKeyword = function (side) {
+    return String(side.keyword || side.displayName || side.id).trim().toLowerCase();
+  };
+
   /** 画面に出す名前。今回のテーマなら 'KAWAII' / 'BEAUTIFUL'。 */
   GameSession.prototype.teamLabel = function (team) {
     return this.teamTheme(team).displayName;
@@ -281,7 +292,7 @@
     var sides = [this.theme.teamA, this.theme.teamB];
     for (var i = 0; i < sides.length; i++) {
       var side = sides[i];
-      if (word === String(side.keyword).toLowerCase()) return side.id;
+      if (word === this.teamKeyword(side)) return side.id;
       var aliases = side.aliases || [];
       for (var j = 0; j < aliases.length; j++) {
         if (word === String(aliases[j]).toLowerCase()) return side.id;
