@@ -225,3 +225,44 @@ test('endSession() のあとは、もう一度どちらでも選べる', () => {
   t.send(comment(TARO, 'beautiful'));
   assert.strictEqual(t.session.teamOf(TARO), 'B', '次の LIVE では選び直せる');
 });
+
+
+// ------------------------------------------------- 何度でもやり直せること
+
+test('やり直しても同じユーザーがもう一度チームを選べる', () => {
+  const t = setup();
+
+  // 1 回目
+  t.send(comment(TARO, 'kawaii'));
+  t.engine.addBoards('A', 500, { source: 'setup' });
+  assert.strictEqual(t.session.teamOf(TARO), 'A');
+
+  // やり直し (画面の RESET ALL と同じ操作)
+  t.session.endSession();
+  t.engine.resetMatch();
+
+  assert.strictEqual(t.session.teamOf(TARO), null, '所属が消える');
+  assert.deepStrictEqual(t.engine.getState().boards, { A: 0, B: 0 });
+  assert.deepStrictEqual(t.engine.getState().score, { A: 0, B: 0 });
+
+  // 2 回目。今度は逆のチームを選べる
+  t.send(comment(TARO, 'beautiful'));
+  assert.strictEqual(t.session.teamOf(TARO), 'B');
+});
+
+test('やり直しを何度繰り返しても状態が残らない', () => {
+  const t = setup();
+  for (let i = 0; i < 5; i++) {
+    t.send(comment(TARO, i % 2 === 0 ? 'kawaii' : 'beautiful'));
+    t.send({ type: 'like', user: TARO, count: 250 });
+    t.send({ type: 'follow', user: TARO });
+
+    t.session.endSession();
+    t.engine.resetMatch();
+
+    assert.deepStrictEqual(t.session.members, {}, `${i + 1} 回目`);
+    assert.deepStrictEqual(t.session.likeBuckets, {});
+    assert.strictEqual(t.session.getFever().active, false);
+    assert.deepStrictEqual(t.engine.getState().boards, { A: 0, B: 0 });
+  }
+});

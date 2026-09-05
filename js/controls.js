@@ -46,6 +46,7 @@
   function Controls(engine, options) {
     options = options || {};
     this.engine = engine;
+    this.session = options.session || null;
     this.router = options.router || null;
     this.liveId = options.liveId || 'live-1';
     this.panel = document.getElementById('controls');
@@ -129,10 +130,22 @@
       case 'remove':       this.engine.removeBoards(team, amount, meta); break;
       case 'attack':       this.engine.attack(team, amount, meta); break;
       case 'reset-round':  this.engine.resetRound(); break;
-      case 'reset-match':  this.engine.resetMatch(); break;
+      case 'reset-match':  this.resetAll(); break;
       case 'burst':        this.burst(); break;
       default: break;
     }
+  };
+
+  /**
+   * 全部やり直す。スコアも板もチーム所属も消えます。
+   *
+   * 所属まで消すのが要点です。残っていると同じアカウントでもう一度
+   * 合言葉をコメントできず、参加のテストを繰り返せません。
+   */
+  Controls.prototype.resetAll = function () {
+    if (this.session) this.session.endSession();
+    this.engine.resetMatch();
+    return this;
   };
 
   Controls.prototype._bindButtons = function () {

@@ -40,7 +40,7 @@
 
     // --- 画面
     var renderer = new KVB.Renderer(engine, { notice: config.notice });
-    var controls = new KVB.Controls(engine, { router: router, liveId: LIVE_ID });
+    var controls = new KVB.Controls(engine, { session: session, router: router, liveId: LIVE_ID });
     var tiktok = new KVB.TikTokAdapter(router, { liveId: LIVE_ID });
 
     // セッションが出す「重要イベントの一時通知」だけを画面へ渡す。
@@ -68,6 +68,10 @@
     global.KVB.controls = controls;
     global.KVB.tiktok = tiktok;
     global.KVB.LIVE_ID = LIVE_ID;
+
+    // 何度でも試せるように、全部やり直す入口をひとつ用意しておく。
+    // 画面の RESET MATCH ボタン / M キーと同じ動きで、チーム所属も消える。
+    global.KVB.reset = function () { return controls.resetAll(); };
 
     // 全部を 1 本の時計で回す
     function loop() {
