@@ -31,7 +31,7 @@
     '1': ['comment', { side: 'A' }],        // team A の合言葉 (テーマから取る)
     '2': ['comment', { side: 'B' }],
     g:   ['gift',    { giftId: 5658, diamonds: 20 }],    // Perfume
-    x:   ['gift',    { giftId: 59314, diamonds: 10 }],   // Banana Peel = 攻撃
+    x:   ['gift',    { giftId: 8913, diamonds: 10 }],    // Rosa = 攻撃
     k:   ['like',    { count: 20 }],
     f:   ['follow',  {}]
   };
@@ -110,7 +110,7 @@
           if (roll < 0.40) self.simulate('like', { count: 100 });
           else if (roll < 0.70) self.simulate('gift', { giftId: 5655, diamonds: 1 });
           else if (roll < 0.85) self.simulate('gift', { giftId: 5658, diamonds: 20 });
-          else if (roll < 0.95) self.simulate('gift', { giftId: 59314, diamonds: 10 });
+          else if (roll < 0.95) self.simulate('gift', { giftId: 8913, diamonds: 10 });
           else self.simulate('follow', {});
         }, index * 120);
       })(i);

@@ -328,7 +328,7 @@ test('maxBoards を明示すれば、これまでどおり超過も許せる', (
 
 // --------------------------------------------------------- 攻撃ギフト
 
-const BANANA = { giftId: 59314, giftName: 'Banana Peel', diamondCount: 10 };   // 攻撃ギフト
+const ROSA = { giftId: 8913, giftName: 'Rosa', diamondCount: 10 };   // 攻撃ギフト
 const ROSE   = { giftId: 5655,  giftName: 'Rose',        diamondCount: 1 };
 
 test('攻撃ギフトは自分の板を積まず、相手の板を剥がす', () => {
@@ -336,7 +336,7 @@ test('攻撃ギフトは自分の板を積まず、相手の板を剥がす', ()
   t.send({ type: 'chat', user: { uniqueId: 'taro' }, text: 'kawaii' });
   t.engine.addBoards('B', 500, { source: 'setup' });
 
-  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, BANANA));
+  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, ROSA));
   assert.deepStrictEqual(t.engine.getState().boards, { A: 0, B: 490 });
 });
 
@@ -345,7 +345,7 @@ test('攻撃ギフトの通知は -N になる', () => {
   t.send({ type: 'chat', user: { uniqueId: 'Taro' }, text: 'kawaii' });
   t.engine.addBoards('B', 500, { source: 'setup' });
 
-  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'Taro' } }, BANANA));
+  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'Taro' } }, ROSA));
   const notice = t.notices.at(-1);
   assert.strictEqual(notice.kind, 'attack');
   assert.strictEqual(notice.user, 'Taro');
@@ -364,7 +364,7 @@ test('未所属ユーザーの攻撃ギフトも、抽選した側の相手を�
   const t = setup({ random: () => 0.9 });          // 抽選は B
   t.engine.addBoards('A', 500, { source: 'setup' });
 
-  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, BANANA));
+  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, ROSA));
   assert.strictEqual(t.engine.getState().boards.A, 490, 'B の相手 = A が剥がされる');
   assert.strictEqual(t.session.teamOf('taro'), null, '所属はしない');
 });
@@ -375,7 +375,7 @@ test('攻撃ギフトはカウントダウンを解除できる', () => {
   t.engine.addBoards('B', 1000, { source: 'setup' });
   assert.ok(t.engine.getState().countdown, 'BEAUTIFUL がカウントダウン中');
 
-  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, BANANA));
+  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, ROSA));
   assert.strictEqual(t.engine.getState().countdown, null, '10 枚剥がして解除');
 });
 
@@ -384,7 +384,7 @@ test('相手が 0 枚なら攻撃しても通知を出さない', () => {
   t.send({ type: 'chat', user: { uniqueId: 'taro' }, text: 'kawaii' });
   const before = t.notices.length;
 
-  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, BANANA));
+  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, ROSA));
   assert.strictEqual(t.notices.length, before);
 });
 
@@ -394,7 +394,7 @@ test('FEVER の倍率は既定では攻撃に掛からない', () => {
   t.engine.addBoards('B', 500, { source: 'setup' });
   t.send({ type: 'follow', user: { uniqueId: 'x' } });
 
-  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, BANANA));
+  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, ROSA));
   assert.strictEqual(t.engine.getState().boards.B, 490, 'x2 されず -10 のまま');
 });
 
@@ -404,7 +404,7 @@ test('fever.multiplyAttack を true にすれば攻撃にも倍率が掛かる',
   t.engine.addBoards('B', 500, { source: 'setup' });
   t.send({ type: 'follow', user: { uniqueId: 'x' } });
 
-  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, BANANA));
+  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, ROSA));
   assert.strictEqual(t.engine.getState().boards.B, 480, '-20');
 });
 
@@ -413,8 +413,8 @@ test('攻撃ギフトの判定は giftId で行う (同名の別ギフトを巻�
   t.send({ type: 'chat', user: { uniqueId: 'taro' }, text: 'kawaii' });
   t.engine.addBoards('B', 500, { source: 'setup' });
 
-  // 名前だけ Banana Peel で giftId が違うものは、攻撃にならない
-  t.send({ type: 'gift', user: { uniqueId: 'taro' }, giftId: 999999, giftName: 'Banana Peel', diamondCount: 10 });
+  // 名前だけ Rosa で giftId が違うものは、攻撃にならない
+  t.send({ type: 'gift', user: { uniqueId: 'taro' }, giftId: 999999, giftName: 'Rosa', diamondCount: 10 });
   assert.deepStrictEqual(t.engine.getState().boards, { A: 10, B: 500 });
 });
 
@@ -425,7 +425,7 @@ test('攻撃ギフトは設定で差し替えられる', () => {
 
   t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, ROSE));   // 1 point x 5
   assert.strictEqual(t.engine.getState().boards.B, 495);
-  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, BANANA)); // もう攻撃ではない
+  t.send(Object.assign({ type: 'gift', user: { uniqueId: 'taro' } }, ROSA)); // もう攻撃ではない
   assert.strictEqual(t.engine.getState().boards.A, 10);
 });
 
